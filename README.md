@@ -1,4 +1,4 @@
-# U.S. Military AI Timeline
+# U.S. Military AI Adoption Timeline
 
 An interactive timeline tracking key research, testing, and deployment milestones of United States military artificial intelligence programs. Designed as a clean, responsive, editorial data dashboard, this project uses plain HTML/CSS/JS without any framework or build steps to remain highly transportable and easy to maintain.
 
