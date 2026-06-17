@@ -1,12 +1,10 @@
-# U.S. Military AI & Autonomy Timeline
+# U.S. Military AI Timeline
 
-An interactive, high-fidelity timeline tracking key research, testing, and deployment milestones of United States military artificial intelligence and autonomy programs. Designed as a clean, responsive, editorial data dashboard, this project uses plain HTML/CSS/JS without any framework or build steps to remain highly transportable and easy to maintain.
+An interactive timeline tracking key research, testing, and deployment milestones of United States military artificial intelligence programs. Designed as a clean, responsive, editorial data dashboard, this project uses plain HTML/CSS/JS without any framework or build steps to remain highly transportable and easy to maintain.
 
 ---
 
 ## Quick Start
-
-Due to modern browser security restrictions (CORS) regarding fetching local files (`file://` protocol), the `data.json` database must be fetched through a local web server. 
 
 To run this project locally, navigate to the project directory and start any simple static server:
 
@@ -56,29 +54,6 @@ Each object in the array represents a single event entry and must follow this st
 | `summary` | `string` | A 1-sentence description visible on the card front. | `"Autonomous, energy-efficient unmanned underwater vehicle..."` |
 | `details` | `string` | Full descriptive paragraph revealed when clicking to expand the card. | `"DARPA's Manta Ray prototype successfully completed..."` |
 | `sources` | `array` | A list of objects containing verifiable public links supporting the record. | `[{"label": "DARPA News", "url": "https://..."}]` |
-
-### Example Entry:
-```json
-{
-  "id": "genai-mil-arctic-bridge",
-  "title": "GenAI.mil / Exercise Arctic Bridge",
-  "year": 2026,
-  "eventDate": "June 2026",
-  "actors": "732nd Air Mobility Squadron",
-  "category": "logistics",
-  "devStartYear": 2025,
-  "summary": "Generative AI used for tactical logistics tabletop exercise scenarios tailored to Arctic conditions.",
-  "details": "The 732nd Air Mobility Squadron leveraged the custom GenAI.mil platform (powered by Gemini) to execute a specialized tabletop exercise in Alaska...",
-  "sources": [
-    {
-      "label": "732nd AMS leverages AI to enhance Arctic TTX",
-      "url": "https://www.af.mil/News/Article-Display/Article/4507566/732nd-ams-leverages-artificial-intelligence-to-enhance-arctic-ttx/"
-    }
-  ]
-}
-```
-
----
 
 ## How to Add a New Timeline Entry
 
@@ -145,16 +120,6 @@ Should this tracker expand to support a dual-country layout (e.g., comparing Uni
 1. **HTML/CSS Adjustment:** Currently, the cards use a single-column layout centered on the screen with the spine resting on the left margin. To introduce a side-by-side comparison, modify `style.css` to position the spine `.timeline-root::before` at `left: 50%; transform: translateX(-50%);`.
 2. **Card Grid Alignment:** Style alternate wrapper cards (`.timeline-card-wrapper`) to shift left or right of the center line using `margin-left: 50%` or absolute left styling, using a country attribute (e.g., `data-country="us"` vs. `data-country="cn"`) to align the metadata indicators respectively.
 
----
-
-## Sourcing & Maintenance Note
-
-To preserve integrity and professional utility:
-1. **Public Verification:** All timeline entries must carry publicly verifiable sources. Avoid speculative, leaked, or uncorroborated rumors.
-2. **Periodic Dates Re-verification:** Autonomous programs and military test events undergo frequent schedule shifts. Verify the logged milestone dates periodically as unclassified reports from joint exercises receive corrections or updates.
-
----
-
 ## License & Attribution
 
-Developed for the Special Competitive Studies Project by Kaci McBrayer, Amy Velnosky, and Nicolas Zarbin. Content is for educational and unclassified tracking purposes only.
+Developed for the Special Competitive Studies Project by Kaci McBrayer, Amy Velnosky, and Nicolas Zarbin.
