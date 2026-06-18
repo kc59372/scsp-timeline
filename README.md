@@ -123,3 +123,4 @@ Should this tracker expand to support a dual-country layout (e.g., comparing Uni
 ## License & Attribution
 
 Developed for the Special Competitive Studies Project by Kaci McBrayer, Amy Velnosky, and Nicolas Zarbin.
+new line
