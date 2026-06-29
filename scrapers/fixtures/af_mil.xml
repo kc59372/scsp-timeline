@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>af.mil News (sample)</title>
+    <link>https://www.af.mil/News/</link>
+    <description>Sample af.mil feed for offline scraper testing.</description>
+    <item>
+      <title>Air Force squadron uses generative AI to accelerate Arctic exercise planning</title>
+      <link>https://www.af.mil/News/Article-Display/Article/0000001/sample-genai-arctic/</link>
+      <description>An air mobility squadron leveraged a generative AI platform to draft tabletop exercise scenarios in minutes.</description>
+      <pubDate>Fri, 13 Jun 2025 16:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Research lab demonstrates autonomous drone swarm coordination</title>
+      <link>https://www.af.mil/News/Article-Display/Article/0000002/sample-drone-swarm/</link>
+      <description>Air Force researchers demonstrated AI-coordinated autonomous unmanned aircraft operating as a swarm.</description>
+      <pubDate>Mon, 22 Jan 2024 11:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Base hosts annual airshow for local families</title>
+      <link>https://www.af.mil/News/Article-Display/Article/0000003/sample-airshow/</link>
+      <description>A community airshow welcoming local families to the base for a day of flight demonstrations.</description>
+      <pubDate>Sat, 14 Sep 2024 13:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,100 @@
+// Prisma schema for the US Military AI Adoption Timeline platform.
+// Derived from the team's spreadsheet schema (NAME, DEV. START, DEPLOYMENT,
+// DETAILS, STATUS, SOURCE(s)) plus the procurement contracts index.
+// See CLAUDE.md > Database Schema for the source of truth.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Milestone {
+  id          String  @id @default(cuid())
+  name        String // System/initiative name
+  description String // Full details
+  actor       String // Developing org (e.g. "Palantir", "DARPA")
+  country     Country @default(US) // Stubbed for future expansion
+  category    Category
+  subcategory String? // e.g. "Counter-UAS", "C2", "Unmanned Maritime"
+
+  // Key dates (all nullable — some are unknown per the research data)
+  devStartDate    DateTime?
+  procurementDate DateTime?
+  testDate        DateTime?
+  testLocation    String?
+  fieldingDate    DateTime?
+  deploymentDate  DateTime?
+
+  // Status tracking
+  entryStatus  EntryStatus   @default(PENDING) // Admin review gate
+  systemStatus SystemStatus? // e.g. Fielded, Testing, Development
+
+  // Source info
+  sourceUrl         String?
+  sourceName        String?
+  additionalSources String[] // Multiple sources per the research
+
+  // Procurement-specific fields
+  contractNumber String?
+  contractValue  Float? // In raw USD for sortability
+  issuingAgency  String?
+  awardedTo      String?
+
+  // Significance
+  significance Int @default(1) // 1–5
+
+  // Dedup key for ingest — sha256(normalizedName + "|" + devStartDateISO).
+  // Nullable so curated seed rows (which omit it) stay valid; unique so
+  // re-ingesting the same scraped item is a no-op upsert.
+  dedupeHash String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tags      Tag[]
+}
+
+enum Category {
+  UNMANNED_SYSTEMS // UUVs, USVs, drones, robot platforms
+  COMMAND_CONTROL // C2, C4ISR, battle management
+  ISR // Intelligence, Surveillance, Reconnaissance
+  LOGISTICS_SUSTAINMENT // Supply chain, maintenance prediction
+  CYBER // Cybersecurity, EW, signals
+  TARGETING // Targeting systems, sensor-to-shooter
+  POLICY_DIRECTIVE // Executive orders, NSPMs, DoD directives
+  PROCUREMENT_CONTRACT // SAM.gov contracts, OTAs
+  TRAINING_SIMULATION // Wargaming, TTX, synthetic data
+  MEDICAL // Battlefield medical AI
+  SPACE // Space domain awareness
+  RESEARCH_DEVELOPMENT // DARPA programs, university research
+}
+
+enum Country {
+  US // Active for MVP
+  CHINA // Stubbed — no data populated until stretch goal
+  NATO
+  OTHER
+}
+
+enum EntryStatus {
+  PENDING // Scraped or submitted, awaiting admin review
+  APPROVED // Live on public site
+  REJECTED // Dismissed
+}
+
+enum SystemStatus {
+  DEVELOPMENT
+  TESTING
+  FIELDED
+  CANCELLED
+  UNKNOWN
+}
+
+model Tag {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  milestones Milestone[]
+}

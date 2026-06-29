@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: scsp_timeline_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: scsp
+      POSTGRES_PASSWORD: scsp_dev_password
+      POSTGRES_DB: scsp_timeline
+    ports:
+      - "5432:5432"
+    volumes:
+      - scsp_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scsp -d scsp_timeline"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  scsp_pgdata:
