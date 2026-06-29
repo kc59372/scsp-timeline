@@ -52,6 +52,9 @@ model Milestone {
   // re-ingesting the same scraped item is a no-op upsert.
   dedupeHash String? @unique
 
+  // Free-text note recorded by an admin on review (e.g. why rejected).
+  reviewNote String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   tags      Tag[]

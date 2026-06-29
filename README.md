@@ -16,7 +16,7 @@ plan. Visual design reference: [SCSP Space Race](https://www.scsp.ai/space-race/
 | 2 — Seed Data | US systems, contracts, policy directives | ✅ Done |
 | 3 — Scrapers | SAM.gov, defense news, af.mil | ⏳ Planned |
 | 4 — Frontend | Timeline, filters, velocity chart | ⏳ Planned |
-| 5 — Admin | Review queue, edit, auth, API | ⏳ Planned |
+| 5 — Admin | Review queue, edit, auth, API | ✅ Done |
 | 6 — Deploy | GitHub Actions, Vercel + Railway | ⏳ Planned |
 
 The previous static-HTML prototype is archived under [`legacy/`](./legacy/).
@@ -95,6 +95,30 @@ Open http://localhost:3000.
 | `npm run db:seed` | Seed the database |
 | `npm run db:studio` | Open Prisma Studio (DB browser) |
 | `npm run db:reset` | Drop, re-migrate, and re-seed |
+
+## Admin Dashboard
+
+The internal review queue lives at `/admin` (auth-gated). Scraped entries arrive
+as `PENDING` and never appear publicly until an admin approves them.
+
+Set up the shared admin credential in `.env`:
+
+```bash
+# 1. generate a bcrypt hash for your chosen password
+npx ts-node scripts/hash_password.ts 'your-password'
+
+# 2. set in .env
+ADMIN_EMAIL="admin@scsp.ai"
+ADMIN_PASSWORD_HASH="<paste hash>"
+NEXTAUTH_SECRET="<random secret, e.g. openssl rand -base64 32>"
+```
+
+> **Note:** bcrypt hashes contain `$` (e.g. `$2b$10$…`). In a local `.env`,
+> Next.js expands `$`, which corrupts the hash — escape each one as `\$2b\$10\$…`.
+> On hosting platforms (Vercel, etc.) env vars are set verbatim — no escaping.
+
+Then visit http://localhost:3000/admin and sign in. From the queue you can
+approve / reject (individually or in bulk) and edit any field before approving.
 
 ## Data
 
