@@ -35,6 +35,7 @@ export interface Milestone {
   issuingAgency: string | null;
   awardedTo: string | null;
   significance: number;
+  reviewNote: string | null;
   createdAt: string;
   updatedAt: string;
   tags: Tag[];
@@ -69,5 +70,35 @@ export async function fetchMilestone(id: string): Promise<Milestone | null> {
   const res = await fetch(`${baseUrl()}/api/milestones/${id}`, { cache: "no-store" });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`fetchMilestone failed: ${res.status}`);
+  return res.json();
+}
+
+/**
+ * Admin reads — forward the caller's session cookie so the admin-gated API
+ * accepts the request (keeps one data path: components → API, never DB).
+ * Used by /admin server components (which read cookies() and pass them here).
+ */
+export async function fetchMilestonesAdmin(
+  cookie: string,
+  params: { status?: string; category?: string } = {},
+): Promise<MilestonesResponse> {
+  const qs = new URLSearchParams();
+  qs.set("status", params.status ?? "PENDING");
+  if (params.category) qs.set("category", params.category);
+  const res = await fetch(`${baseUrl()}/api/milestones?${qs}`, {
+    cache: "no-store",
+    headers: { cookie },
+  });
+  if (!res.ok) throw new Error(`fetchMilestonesAdmin failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchMilestoneAdmin(id: string, cookie: string): Promise<Milestone | null> {
+  const res = await fetch(`${baseUrl()}/api/milestones/${id}`, {
+    cache: "no-store",
+    headers: { cookie },
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`fetchMilestoneAdmin failed: ${res.status}`);
   return res.json();
 }
