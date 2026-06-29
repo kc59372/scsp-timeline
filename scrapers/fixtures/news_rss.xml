@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Defense News (sample)</title>
+    <link>https://example-defense-news.test/</link>
+    <description>Sample feed for offline scraper testing.</description>
+    <item>
+      <title>Navy tests new autonomous underwater drone for mine countermeasures</title>
+      <link>https://example-defense-news.test/articles/autonomous-uuv-test</link>
+      <description>The Navy completed at-sea trials of an unmanned underwater vehicle using onboard AI for autonomous navigation.</description>
+      <pubDate>Tue, 11 Mar 2025 14:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Pentagon issues new policy directive on generative AI use</title>
+      <link>https://example-defense-news.test/articles/genai-policy-directive</link>
+      <description>A new DoD directive sets guidance on the responsible use of generative artificial intelligence across the department.</description>
+      <pubDate>Mon, 05 Feb 2024 09:30:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Air Force awards machine learning contract for predictive maintenance</title>
+      <link>https://example-defense-news.test/articles/ml-maintenance-award</link>
+      <description>The service awarded a contract to apply machine learning algorithms to aircraft sustainment and maintenance forecasting.</description>
+      <pubDate>Wed, 18 Sep 2024 12:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Annual gala raises funds for veterans</title>
+      <link>https://example-defense-news.test/articles/veterans-gala</link>
+      <description>A community fundraising dinner supporting local veterans and their families.</description>
+      <pubDate>Thu, 20 Jun 2024 18:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

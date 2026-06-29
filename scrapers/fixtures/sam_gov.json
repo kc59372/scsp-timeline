@@ -1,0 +1,34 @@
+{
+  "totalRecords": 2,
+  "limit": 100,
+  "offset": 0,
+  "opportunitiesData": [
+    {
+      "noticeId": "abc123def456",
+      "title": "Artificial Intelligence for Autonomous ISR Platforms",
+      "solicitationNumber": "FA8750-25-R-0042",
+      "fullParentPathName": "DEPT OF DEFENSE.DEPT OF THE AIR FORCE.AFRL",
+      "organizationType": "OFFICE",
+      "type": "Combined Synopsis/Solicitation",
+      "postedDate": "2025-03-14",
+      "uiLink": "https://sam.gov/opp/abc123def456/view",
+      "description": "The Air Force Research Laboratory seeks AI/ML capabilities for autonomous intelligence, surveillance, and reconnaissance.",
+      "award": {
+        "amount": "24500000",
+        "awardee": { "name": "Example Defense AI Corp" }
+      }
+    },
+    {
+      "noticeId": "ghi789jkl012",
+      "title": "Machine Learning Logistics Optimization RFI",
+      "solicitationNumber": "W911QY-25-RFI-0007",
+      "fullParentPathName": "DEPT OF DEFENSE.DEPT OF THE ARMY.ACC",
+      "organizationType": "OFFICE",
+      "type": "Sources Sought",
+      "postedDate": "2024-11-02",
+      "uiLink": "https://sam.gov/opp/ghi789jkl012/view",
+      "description": "Request for information on machine-learning-driven predictive logistics and sustainment.",
+      "award": null
+    }
+  ]
+}
