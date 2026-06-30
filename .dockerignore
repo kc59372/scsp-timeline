@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.github
+legacy
+scrapers/.venv
+scrapers/__pycache__
+**/__pycache__
+.env
+.env.*
+!.env.production.example
+npm-debug.log*
+*.tsbuildinfo
+.DS_Store
+DEPLOY.md
+README.md

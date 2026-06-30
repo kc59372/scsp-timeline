@@ -5,6 +5,7 @@ import { primaryYear } from "@/lib/format";
 
 const START_YEAR = 2016;
 const END_YEAR = 2026;
+const CHART_HEIGHT_PX = 150; // tallest bar (max-count year)
 
 /**
  * Hand-rolled adoption-velocity bar chart: milestones per year, 2016–2026.
@@ -28,16 +29,18 @@ export function AdoptionVelocityChart({ milestones }: { milestones: Milestone[] 
       <p className="mb-5 text-sm text-gray-400">
         Tracked US military AI milestones per year — the pace of adoption over time.
       </p>
-      <div className="flex h-44 items-end gap-1.5 sm:gap-2">
+      {/* Pixel heights (not %) so bars render reliably regardless of flex
+          height resolution; bars bottom-align and grow upward. */}
+      <div className="flex items-end gap-1.5 sm:gap-2">
         {years.map((y) => {
           const c = counts.get(y)!;
-          const pct = (c / max) * 100;
+          const h = c > 0 ? Math.max(6, Math.round((c / max) * CHART_HEIGHT_PX)) : 0;
           return (
-            <div key={y} className="flex flex-1 flex-col items-center justify-end gap-1">
+            <div key={y} className="flex flex-1 flex-col items-center gap-1">
               <span className="font-mono text-[0.65rem] text-gray-400">{c || ""}</span>
               <div
                 className="w-full rounded-t bg-gradient-to-t from-blue-600 to-signal transition-all"
-                style={{ height: `${Math.max(pct, c > 0 ? 4 : 0)}%` }}
+                style={{ height: `${h}px` }}
                 title={`${y}: ${c} milestone(s)`}
               />
               <span className="font-mono text-[0.6rem] text-gray-500">

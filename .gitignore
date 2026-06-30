@@ -23,6 +23,8 @@ scrapers/__pycache__/
 # environment
 .env
 .env*.local
+.env.production
+!.env.production.example
 
 # prisma
 # (migrations ARE committed; only local artifacts ignored)
