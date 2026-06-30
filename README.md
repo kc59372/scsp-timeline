@@ -17,7 +17,7 @@ plan. Visual design reference: [SCSP Space Race](https://www.scsp.ai/space-race/
 | 3 — Scrapers | SAM.gov, defense news, af.mil | ⏳ Planned |
 | 4 — Frontend | Timeline, filters, velocity chart | ⏳ Planned |
 | 5 — Admin | Review queue, edit, auth, API | ✅ Done |
-| 6 — Deploy | GitHub Actions, Vercel + Railway | ⏳ Planned |
+| 6 — Deploy | Docker self-host + scheduled scraping | ✅ Done |
 
 The previous static-HTML prototype is archived under [`legacy/`](./legacy/).
 
@@ -27,6 +27,12 @@ The previous static-HTML prototype is archived under [`legacy/`](./legacy/).
 - **Database:** PostgreSQL via Prisma ORM
 - **Auth (admin):** NextAuth.js (added in Phase 5)
 - **Local DB:** Docker Compose (Postgres 16)
+
+## Deployment
+
+Self-host with Docker (app + Postgres) and schedule the scrapers via GitHub
+Actions or system cron — see **[DEPLOY.md](./DEPLOY.md)** for the full runbook.
+The `/api/ingest` endpoint is protected by a shared `INGEST_TOKEN` in production.
 
 ## Local Setup
 

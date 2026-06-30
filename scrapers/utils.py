@@ -28,6 +28,7 @@ from dateutil import parser as dateparser
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 INGEST_URL = os.environ.get("INGEST_URL", "http://localhost:3000/api/ingest")
+INGEST_TOKEN = os.environ.get("INGEST_TOKEN")  # bearer token for /api/ingest (prod)
 
 # Valid Category enum values (mirror of prisma/schema.prisma).
 CATEGORIES = {
@@ -181,6 +182,9 @@ def post_batch(
 
     target = url or INGEST_URL
     payload = json.dumps(items).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if INGEST_TOKEN:
+        headers["Authorization"] = f"Bearer {INGEST_TOKEN}"
 
     last_err: Exception | None = None
     for attempt in range(1, max_retries + 1):
@@ -188,7 +192,7 @@ def post_batch(
             req = urlrequest.Request(
                 target,
                 data=payload,
-                headers={"Content-Type": "application/json"},
+                headers=headers,
                 method="POST",
             )
             with urlrequest.urlopen(req, timeout=30) as resp:

@@ -1,0 +1,38 @@
+# Production stack: Next.js app + Postgres. Host-agnostic self-host.
+#   cp .env.production.example .env.production   # then fill in secrets
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+# Both services read .env.production. The db reads POSTGRES_* from it; the web
+# container reads DATABASE_URL (host "db") + app secrets. The DB has no host
+# port (reachable only inside the compose network) so it does not clash with
+# the dev compose on 5432.
+
+services:
+  db:
+    image: postgres:16
+    container_name: scsp_timeline_db_prod
+    restart: unless-stopped
+    env_file: .env.production
+    volumes:
+      - scsp_pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scsp -d scsp_timeline"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: scsp_timeline_web
+    restart: unless-stopped
+    env_file: .env.production
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+volumes:
+  scsp_pgdata_prod:

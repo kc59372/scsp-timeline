@@ -8,12 +8,32 @@
  * Response (HTTP 200, even with per-item errors):
  *   { received, inserted, skipped, errors: [{ index, name?, error }] }
  * HTTP 400 only if the whole body is unparseable / not object|array.
+ *
+ * Auth: if INGEST_TOKEN is set, requests must send `Authorization: Bearer <token>`
+ * (401 otherwise). When unset, the endpoint is open — fine for local dev, but
+ * production MUST set INGEST_TOKEN (see DEPLOY.md).
  */
+import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { normalizeMilestone, type RawMilestone } from "@/lib/ingest";
 
+/** Constant-time compare of the Bearer token against INGEST_TOKEN. */
+function tokenOk(req: NextRequest): boolean {
+  const expected = process.env.INGEST_TOKEN;
+  if (!expected) return true; // not configured → open (dev only)
+  const header = req.headers.get("authorization") ?? "";
+  const provided = header.startsWith("Bearer ") ? header.slice(7) : "";
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export async function POST(req: NextRequest) {
+  if (!tokenOk(req)) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
   let body: unknown;
   try {
     body = await req.json();

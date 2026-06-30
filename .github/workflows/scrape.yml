@@ -1,0 +1,44 @@
+name: Scheduled Scrape
+
+# Runs the data-ingestion scrapers on a schedule and POSTs new entries to the
+# deployed /api/ingest (they land as PENDING for admin review).
+#
+# Required repository secrets:
+#   INGEST_URL      e.g. https://timeline.example.org/api/ingest
+#   INGEST_TOKEN    must match the deployment's INGEST_TOKEN
+#   SAM_GOV_API_KEY free key from api.sam.gov (optional; sam_gov skips if unset)
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # daily at 06:00 UTC
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      INGEST_URL: ${{ secrets.INGEST_URL }}
+      INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+      SAM_GOV_API_KEY: ${{ secrets.SAM_GOV_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: scrapers/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scrapers/requirements.txt
+
+      - name: Defense news RSS
+        run: python scrapers/news_rss.py
+
+      - name: af.mil news
+        run: python scrapers/af_mil.py
+
+      - name: SAM.gov procurement
+        # Skips itself if SAM_GOV_API_KEY is unset (exits 2); don't fail the run.
+        run: python scrapers/sam_gov.py || echo "sam_gov skipped or failed (continuing)"
