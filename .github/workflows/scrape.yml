@@ -14,9 +14,14 @@ name: Scheduled Scrape
 # and are grouped into program lifecycles by the admin review queue.
 
 on:
-  schedule:
-    - cron: "0 6 * * *" # daily at 06:00 UTC
-  workflow_dispatch: {} # allow manual runs from the Actions tab
+  # DAILY SCHEDULE PAUSED. The deployed app still runs pre-verifier ingest code
+  # that resets a re-ingested event's entryStatus back to PENDING, which would
+  # revert admin-approved entries on the next scrape. Re-enable the cron below
+  # only after redeploying the app with the ingest-verification code (which
+  # preserves entryStatus on re-ingest). Until then this workflow is manual-only.
+  # schedule:
+  #   - cron: "0 6 * * *" # daily at 06:00 UTC
+  workflow_dispatch: {} # manual runs only (from the Actions tab)
 
 jobs:
   scrape:
