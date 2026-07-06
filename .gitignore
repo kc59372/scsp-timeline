@@ -40,3 +40,9 @@ yarn-error.log*
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+# local data artifacts — never commit DB dumps or admin queue exports
+*.sql.gz
+pending_review_queue_*.csv
+admin_queue_pending_*.csv
+admin_queue_pending_*.xlsx
