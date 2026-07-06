@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { normalizeMilestone, eventStatus, statusRank, type RawMilestone } from "@/lib/ingest";
+import { verifyEntry, type VerifyStatus } from "@/lib/verify";
 
 /** Constant-time compare of the Bearer token against INGEST_TOKEN. */
 function tokenOk(req: NextRequest): boolean {
@@ -49,6 +50,8 @@ export async function POST(req: NextRequest) {
 
   let inserted = 0;
   let skipped = 0;
+  // Verification outcome tally (new inserts only — see below).
+  const verdicts: Record<VerifyStatus, number> = { APPROVED: 0, PENDING: 0, REJECTED: 0 };
   const errors: { index: number; name?: string; error: string }[] = [];
 
   for (let i = 0; i < items.length; i++) {
@@ -93,11 +96,35 @@ export async function POST(req: NextRequest) {
       });
 
       if (existing) {
-        // Known item — refresh its fields but keep it in review (PENDING).
-        await prisma.milestone.update({ where: { dedupeHash }, data: createData });
+        // Known item — refresh its fields but PRESERVE its review decision.
+        // Re-ingesting must not undo an admin's approve/reject or re-trigger
+        // verification, so entryStatus is intentionally left untouched here.
+        const { entryStatus: _drop, ...updateData } = createData;
+        await prisma.milestone.update({ where: { dedupeHash }, data: updateData });
         skipped++;
       } else {
-        await prisma.milestone.create({ data: createData });
+        // New event — verify it (relevance + auto-approval) to set the review
+        // gate instead of the blanket PENDING that normalizeMilestone applies.
+        const verdict = await verifyEntry({
+          name: data.name,
+          description: data.description ?? "",
+          category: data.category as string,
+          sourceName: data.sourceName ?? "",
+          significance: data.significance ?? 1,
+          contractValue: data.contractValue ?? null,
+          programSlug: program?.slug,
+        });
+        verdicts[verdict.status]++;
+        console.log(
+          `[ingest] ${verdict.status} (${verdict.method}) "${data.name.slice(0, 80)}" — ${verdict.reason}`,
+        );
+        await prisma.milestone.create({
+          data: {
+            ...createData,
+            entryStatus: verdict.status,
+            verifyReason: `${verdict.method}: ${verdict.reason}`,
+          },
+        });
         inserted++;
       }
     } catch (e) {
@@ -113,6 +140,7 @@ export async function POST(req: NextRequest) {
     received: items.length,
     inserted,
     skipped,
+    verdicts,
     errors,
   });
 }

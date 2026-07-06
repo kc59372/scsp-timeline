@@ -25,6 +25,7 @@ from urllib.parse import urlparse
 import feedparser
 
 import utils
+from programs import match_program  # curated cross-source program registry
 
 # Only keep items that look AI/autonomy-relevant. "ai" is handled separately as
 # a CASE-SENSITIVE acronym (see _AI_ACRONYM) so coincidental lowercase "ai"
@@ -133,16 +134,22 @@ def map_entry(entry: Any, source_name: str, default_event_type: str) -> dict[str
     )
     event_date = utils.normalize_date(published)
 
+    # Cross-source grouping: if the headline/summary names a known program, link
+    # this event to it and adopt the program's canonical category. Unknown
+    # programs stay ungrouped (program_* = None) for admin merge.
+    program = match_program(haystack)
+
     return utils.to_milestone(
         name=title,
-        category=infer_category(haystack),
+        category=program["category"] if program else infer_category(haystack),
         actor=source_name,
         description=summary,
         source_url=link,
         source_name=source_name,
+        program_name=program["name"] if program else None,
+        program_slug_value=program["slug"] if program else None,
         event_type=infer_event_type(haystack, default_event_type),
         event_date=event_date,
-        # Program left unset — admin groups these from the review queue.
         significance=2,
     )
 
