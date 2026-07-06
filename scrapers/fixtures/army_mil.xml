@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>army.mil News (sample)</title>
+    <link>https://www.army.mil/news/</link>
+    <description>Sample army.mil feed for offline scraper testing.</description>
+    <item>
+      <title>Army fields AI-enabled counter-drone system to forward units</title>
+      <link>https://www.army.mil/article/0000101/sample-counter-drone/</link>
+      <description>The Army has fielded an artificial intelligence counter-unmanned aircraft system to deployed units.</description>
+      <pubDate>Tue, 04 Mar 2025 14:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Soldiers test autonomous resupply vehicle in field evaluation</title>
+      <link>https://www.army.mil/article/0000102/sample-autonomous-resupply/</link>
+      <description>An autonomous ground resupply vehicle underwent operational test and evaluation at a training center.</description>
+      <pubDate>Wed, 18 Sep 2024 09:30:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Army band performs at Independence Day parade</title>
+      <link>https://www.army.mil/article/0000103/sample-parade/</link>
+      <description>The Army band entertained families at the annual Independence Day celebration.</description>
+      <pubDate>Thu, 04 Jul 2024 18:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

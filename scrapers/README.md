@@ -1,15 +1,50 @@
-# Scrapers — data ingestion pipeline
+# Scrapers — historical .mil/.gov ingestion pipeline
 
-Python scrapers that pull US military AI milestones from public defense sources
-and POST them to the app's `/api/ingest` endpoint. **Everything ingested lands
-as `PENDING`** for admin review (Phase 5) — nothing auto-publishes.
+Python scrapers that backfill US military AI **lifecycle events** from official
+**.mil / .gov** sources and POST them to the app's `/api/ingest` endpoint.
+Nothing else is scraped — commercial news feeds were removed to avoid copyright
+issues. **Everything ingested lands as `PENDING`** for admin review; nothing
+auto-publishes.
 
-| Scraper | Source | Output category |
+## The lifecycle model
+
+Each scraped row is a single dated **event** in a program's lifecycle. The
+server groups events into a **Program** (e.g. "Project Maven") so the timeline
+can show a system progress from request → award → test → fielding → deployment.
+
+| Field emitted | Meaning |
+|---|---|
+| `programName` / `programSlug` | which program this event belongs to (server upserts the Program by slug) |
+| `eventType` | `RD_START`, `SOLICITATION`, `AWARD`, `TEST`, `FIELDING`, `DEPLOYMENT`, `POLICY`, `OTHER` |
+| `eventDate` | when this event happened |
+
+- **SAM.gov & SBIR** carry a reliable key (solicitation number / award title),
+  so their events **auto-link** into programs on ingest.
+- **RSS news items** (a headline is an unreliable key) are emitted **ungrouped**;
+  an admin merges them into the right program from the review queue
+  ("Merge into program").
+
+## Scraper roster
+
+| Scraper | Source (host) | Default event type |
 |---|---|---|
-| `sam_gov.py` | SAM.gov Opportunities API (`api.sam.gov`) | `PROCUREMENT_CONTRACT` |
-| `news_rss.py` | Breaking Defense, DefenseScoop, C4ISRNET, af.mil, DARPA (RSS) | inferred from content |
-| `af_mil.py` | af.mil official news (RSS) | inferred from content |
-| `utils.py` | shared helpers (dates, dedup, POST, fixtures) | — |
+| `sam_gov.py` | SAM.gov Opportunities API (`api.sam.gov`) — needs key | `AWARD` / `SOLICITATION` |
+| `usaspending_gov.py` | USAspending.gov award API (`api.usaspending.gov`) — **no key, historical to 2016** | `AWARD` |
+| `darpa_mil.py` | darpa.mil news (RSS) | `RD_START` (→ `TEST`) |
+| `af_mil.py` | af.mil news (RSS) | `FIELDING` |
+| `army_mil.py` | army.mil news (RSS) | `FIELDING` |
+| `navy_mil.py` | navy.mil news (RSS) — feed URL unverified (yields none) | `FIELDING` |
+| `spaceforce_mil.py` | spaceforce.mil news (RSS) | `FIELDING` |
+| `defense_gov.py` | defense.gov DoD News (RSS) | `OTHER` |
+| `gao_gov.py` | gao.gov reports (RSS) | `POLICY` |
+| `congress_gov.py` | Congress.gov API (`api.congress.gov`) | `POLICY` |
+| `sbir_gov.py` | SBIR.gov awards API (open) | `RD_START` |
+| `rss.py` | shared RSS machinery (relevance + category + event-type inference) | — |
+| `utils.py` | shared helpers (dates, dedup, POST, `program_slug`) | — |
+| `backfill.py` | runs the whole roster in one pass (2016→present) | — |
+
+Event type and category are inferred per item from the text and always land
+`PENDING`, so a wrong guess is cheap — the admin corrects it on review.
 
 ## Setup
 
@@ -23,60 +58,74 @@ scrapers/.venv/bin/pip install -r scrapers/requirements.txt
 | Variable | Used by | Notes |
 |---|---|---|
 | `SAM_GOV_API_KEY` | `sam_gov.py` | Free key — https://open.gsa.gov/api/get-opportunities-public-api/ |
+| `CONGRESS_API_KEY` | `congress_gov.py` | Free key — https://api.congress.gov/sign-up/ |
 | `INGEST_URL` | all | Defaults to `http://localhost:3000/api/ingest` |
+| `INGEST_TOKEN` | all | Bearer token for `/api/ingest` in production (see DEPLOY.md) |
 
-These are read from the process environment. For local runs, export them or
-source the project `.env` (e.g. `set -a; source .env; set +a`).
+`gao_gov.py`, the `*.mil` RSS scrapers, and `sbir_gov.py` need **no key**.
+Read these from the environment (`set -a; source .env; set +a`).
 
-## Common flags (all scrapers)
+## Common flags (all scrapers + backfill)
 
 | Flag | Effect |
 |---|---|
-| `--fixtures` | Read saved sample payloads from `fixtures/` instead of the network (no key needed) |
+| `--fixtures` | Read saved sample payloads from `fixtures/` instead of the network (no key) |
 | `--dry-run` | Print normalized JSON to stdout; **do not** POST |
-| `--limit N` | Cap items fetched/emitted (default 50) |
+| `--limit N` | Cap items fetched/emitted (default 50; backfill default 200) |
+
+`sam_gov.py` also takes `--posted-from MM/DD/YYYY` / `--posted-to`.
+`backfill.py` also takes `--only sam_gov,darpa_mil` to run a subset.
 
 ## Usage
 
-Offline smoke test (no network, no DB, no API key):
+Offline smoke test (no network, no DB, no keys):
 
 ```bash
-scrapers/.venv/bin/python scrapers/sam_gov.py  --fixtures --dry-run
-scrapers/.venv/bin/python scrapers/news_rss.py --fixtures --dry-run
-scrapers/.venv/bin/python scrapers/af_mil.py   --fixtures --dry-run
+scrapers/.venv/bin/python scrapers/backfill.py --fixtures --dry-run
+# or a single scraper:
+scrapers/.venv/bin/python scrapers/darpa_mil.py --fixtures --dry-run
 ```
 
-Live ingest (requires `npm run dev` + Postgres running):
+Full historical backfill (requires `npm run dev` + Postgres running):
 
 ```bash
-# from fixtures, but actually POST to the running app:
-scrapers/.venv/bin/python scrapers/news_rss.py --fixtures
-
-# live network fetch + POST:
-export SAM_GOV_API_KEY=your_key_here
-scrapers/.venv/bin/python scrapers/sam_gov.py --limit 100
+set -a; source .env; set +a            # SAM_GOV_API_KEY, CONGRESS_API_KEY, INGEST_URL
+scrapers/.venv/bin/python scrapers/backfill.py --limit 200
 ```
 
 ## Dedup & review gate
 
-- **Within a run:** `utils.local_dedupe` drops obvious dupes by `(name, devStartDate)`.
-- **Authoritative:** the server computes `dedupeHash = sha256(name|devStartDate)`
-  and upserts on it, so re-running a scraper updates rather than duplicates.
+- **Within a run:** `utils.local_dedupe` drops dupes by
+  `(programSlug, eventType, eventDate, sourceUrl)` for events, else `(name, devStartDate)`.
+- **Authoritative:** the server computes the same event hash and upserts on it,
+  so re-running a scraper updates rather than duplicates.
 - The ingest response summarizes each run: `{ received, inserted, skipped, errors }`.
 
 ## Fixtures
 
 `fixtures/` holds committed sample payloads (one per scraper) so the pipeline is
-testable offline and in CI:
+testable offline and in CI. Each RSS sample deliberately includes an irrelevant
+item to exercise the relevance filter, and a mix of event-type keywords
+(awarded / tested / fielded / deployed) to exercise event-type inference.
 
-- `sam_gov.json` — sample Opportunities API response
-- `news_rss.xml` — sample defense-news RSS
-- `af_mil.xml` — sample af.mil RSS
+## Historical backfill (to 2016) & the HTML-scraping question
 
-Each sample deliberately includes an irrelevant item to exercise the relevance
-filter.
+RSS feeds are **recent-only** (last ~50 articles), so the `.mil` news scrapers
+cannot reach 2016. Historical depth comes from the two **award APIs**:
+
+- **`usaspending_gov.py`** — the no-key historical backbone. DoD AI contract
+  awards 2016→present, with amount / recipient / agency / date. Enforces a 2016
+  floor client-side (the API's time filter keys on action date, so some
+  period-of-performance start dates predate the window and are dropped).
+- **`sam_gov.py`** — richer (solicitations + awards) but needs a free key.
+
+Direct HTML scraping of the sites' search/archive pages was investigated and is
+**not viable** without a headless browser: defense.gov / af.mil / gao.gov return
+Akamai `403 Access Denied` to plain HTTP (even with a browser UA), and
+army.mil's listing paginates via JS (no URL-addressable pages). USAspending.gov
+replaces that need for procurement data.
 
 ## Out of scope (later phases)
 
-- Scheduled runs via GitHub Actions cron → Phase 6 (`.github/workflows/scrape.yml`).
-- Admin review UI for `PENDING` entries → Phase 5.
+- Public timeline lifecycle-track rendering (groups events per program) → Phase D.
+- Scheduled runs via GitHub Actions cron → `.github/workflows/scrape.yml`.

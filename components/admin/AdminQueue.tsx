@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Milestone } from "@/lib/milestones";
 import { categoryLabel } from "@/lib/categories";
+import { eventTypeLabel } from "@/lib/events";
 import { formatMilestoneDate } from "@/lib/format";
+import { MergeControl } from "./MergeControl";
 
 /** Pending review queue with bulk + per-row approve/reject/edit. */
 export function AdminQueue({ items }: { items: Milestone[] }) {
@@ -79,16 +81,24 @@ export function AdminQueue({ items }: { items: Milestone[] }) {
         </button>
       </div>
 
+      {/* group the selected events into a lifecycle program */}
+      {selected.size > 0 && (
+        <div className="mb-3">
+          <MergeControl selectedIds={Array.from(selected)} onDone={() => setSelected(new Set())} />
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-lg border border-edge">
         <table className="w-full text-left text-sm">
           <thead className="bg-panel font-mono text-[0.65rem] uppercase tracking-wide text-gray-500">
             <tr>
               <th className="p-3"><input type="checkbox" checked={allSelected} onChange={toggleAll} /></th>
               <th className="p-3">Name</th>
+              <th className="p-3">Program</th>
+              <th className="p-3">Event</th>
               <th className="p-3">Category</th>
               <th className="p-3">Actor</th>
-              <th className="p-3">Dev Start</th>
-              <th className="p-3">Deployment</th>
+              <th className="p-3">Event Date</th>
               <th className="p-3">Source</th>
               <th className="p-3">Scraped</th>
               <th className="p-3">Actions</th>
@@ -101,10 +111,19 @@ export function AdminQueue({ items }: { items: Milestone[] }) {
                   <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggle(m.id)} />
                 </td>
                 <td className="p-3 font-medium text-gray-100">{m.name}</td>
+                <td className="p-3 text-xs">
+                  {m.program ? (
+                    <span className="rounded bg-indigo-500/10 px-2 py-0.5 text-indigo-300">{m.program.name}</span>
+                  ) : (
+                    <span className="text-gray-600">— ungrouped</span>
+                  )}
+                </td>
+                <td className="p-3 font-mono text-xs text-gray-400">{eventTypeLabel(m.eventType)}</td>
                 <td className="p-3 text-gray-400">{categoryLabel(m.category)}</td>
                 <td className="p-3 text-gray-400">{m.actor}</td>
-                <td className="p-3 font-mono text-xs text-gray-500">{formatMilestoneDate(m.devStartDate) ?? "—"}</td>
-                <td className="p-3 font-mono text-xs text-gray-500">{formatMilestoneDate(m.deploymentDate) ?? "—"}</td>
+                <td className="p-3 font-mono text-xs text-gray-500">
+                  {formatMilestoneDate(m.eventDate) ?? formatMilestoneDate(m.devStartDate) ?? "—"}
+                </td>
                 <td className="p-3 text-xs">
                   {m.sourceUrl ? (
                     <a href={m.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">

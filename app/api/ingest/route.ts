@@ -15,8 +15,9 @@
  */
 import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { normalizeMilestone, type RawMilestone } from "@/lib/ingest";
+import { normalizeMilestone, eventStatus, statusRank, type RawMilestone } from "@/lib/ingest";
 
 /** Constant-time compare of the Bearer token against INGEST_TOKEN. */
 function tokenOk(req: NextRequest): boolean {
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   for (let i = 0; i < items.length; i++) {
     const raw = items[i] as RawMilestone;
-    const { data, dedupeHash, error } = normalizeMilestone(raw);
+    const { data, dedupeHash, program, eventType, error } = normalizeMilestone(raw);
 
     if (error || !data || !dedupeHash) {
       errors.push({ index: i, name: (raw?.name as string) ?? undefined, error: error ?? "normalization failed" });
@@ -60,6 +61,32 @@ export async function POST(req: NextRequest) {
     }
 
     try {
+      // Upsert the parent Program (by slug) and link the event to it. On an
+      // existing program we don't clobber curated fields — we only advance
+      // systemStatus toward the furthest-along lifecycle stage seen.
+      let createData: Prisma.MilestoneCreateInput = data;
+      if (program) {
+        const prog = await prisma.program.upsert({
+          where: { slug: program.slug },
+          create: program.create,
+          update: {},
+          select: { id: true, systemStatus: true },
+        });
+
+        if (eventType) {
+          const next = eventStatus(eventType);
+          const currentRank = prog.systemStatus ? statusRank(prog.systemStatus) : -1;
+          if (next.rank > 0 && statusRank(next.status) > currentRank) {
+            await prisma.program.update({
+              where: { id: prog.id },
+              data: { systemStatus: next.status },
+            });
+          }
+        }
+
+        createData = { ...data, program: { connect: { id: prog.id } } };
+      }
+
       const existing = await prisma.milestone.findUnique({
         where: { dedupeHash },
         select: { id: true },
@@ -67,10 +94,10 @@ export async function POST(req: NextRequest) {
 
       if (existing) {
         // Known item — refresh its fields but keep it in review (PENDING).
-        await prisma.milestone.update({ where: { dedupeHash }, data });
+        await prisma.milestone.update({ where: { dedupeHash }, data: createData });
         skipped++;
       } else {
-        await prisma.milestone.create({ data });
+        await prisma.milestone.create({ data: createData });
         inserted++;
       }
     } catch (e) {

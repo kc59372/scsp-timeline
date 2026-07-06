@@ -30,12 +30,35 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 INGEST_URL = os.environ.get("INGEST_URL", "http://localhost:3000/api/ingest")
 INGEST_TOKEN = os.environ.get("INGEST_TOKEN")  # bearer token for /api/ingest (prod)
 
+# Identify ourselves politely. Several .gov WAFs (e.g. Akamai in front of
+# api.congress.gov) return 403 to the default "Python-urllib" User-Agent, so
+# every outbound request must set this.
+USER_AGENT = "scsp-timeline-scraper/1.0 (US military AI adoption timeline; contact: admin)"
+
 # Valid Category enum values (mirror of prisma/schema.prisma).
 CATEGORIES = {
     "UNMANNED_SYSTEMS", "COMMAND_CONTROL", "ISR", "LOGISTICS_SUSTAINMENT",
     "CYBER", "TARGETING", "POLICY_DIRECTIVE", "PROCUREMENT_CONTRACT",
     "TRAINING_SIMULATION", "MEDICAL", "SPACE", "RESEARCH_DEVELOPMENT",
 }
+
+# Valid EventType enum values (mirror of prisma/schema.prisma). A milestone is a
+# single dated event in a program's lifecycle; the server derives the program's
+# systemStatus from its furthest-along event.
+EVENT_TYPES = {
+    "RD_START", "SOLICITATION", "AWARD", "TEST",
+    "FIELDING", "DEPLOYMENT", "POLICY", "OTHER",
+}
+
+
+def program_slug(value: str) -> str:
+    """Normalize a program label → stable slug (mirror of lib/ingest.programSlug).
+
+    Used for cross-source entity resolution: events whose slug matches auto-link
+    to the same Program on ingest; the rest are merged by an admin.
+    """
+    slug = re.sub(r"[^a-z0-9]+", "-", (value or "").strip().lower())
+    return slug.strip("-")
 
 _MONTHS = (
     "january february march april may june july august september "
@@ -55,6 +78,13 @@ def normalize_date(value: str | None) -> str | None:
     text = str(value).strip()
     if not text:
         return None
+
+    # Full ISO date/datetime (YYYY-MM-DD[...]) — parse directly. Must come BEFORE
+    # the range split below, whose hyphen separator would otherwise chop
+    # "2020-09-29" down to just its year.
+    m_iso = re.match(r"(\d{4})-(\d{2})-(\d{2})", text)
+    if m_iso:
+        return f"{m_iso.group(1)}-{m_iso.group(2)}-{m_iso.group(3)}"
 
     # Range: take the part before an en/em dash or "to".
     text = re.split(r"\s*(?:–|—|-{1,2}|\bto\b)\s*", text, maxsplit=1)[0].strip()
@@ -88,6 +118,10 @@ def to_milestone(
     description: str = "",
     actor: str | None = None,
     subcategory: str | None = None,
+    program_name: str | None = None,
+    program_slug_value: str | None = None,
+    event_type: str | None = None,
+    event_date: str | None = None,
     dev_start_date: str | None = None,
     procurement_date: str | None = None,
     test_date: str | None = None,
@@ -102,13 +136,23 @@ def to_milestone(
     awarded_to: str | None = None,
     significance: int = 1,
 ) -> dict[str, Any]:
-    """Build a normalized milestone dict for /api/ingest.
+    """Build a normalized milestone/event dict for /api/ingest.
+
+    Lifecycle grouping: pass `program_name` (and optionally `program_slug_value`
+    to override the derived slug) plus an `event_type`, and the server upserts
+    the parent Program and links this event to it. `event_date` is the
+    stage-agnostic date this event occurred.
 
     entryStatus is intentionally omitted — the server forces PENDING.
     Only non-null fields are included to keep payloads tidy.
     """
     if category not in CATEGORIES:
         raise ValueError(f"unknown category: {category}")
+    if event_type is not None and event_type not in EVENT_TYPES:
+        raise ValueError(f"unknown event_type: {event_type}")
+
+    # Derive the program slug from the explicit override, else the program name.
+    slug = program_slug_value or (program_slug(program_name) if program_name else None)
 
     item: dict[str, Any] = {
         "name": name.strip(),
@@ -122,6 +166,10 @@ def to_milestone(
     optional = {
         "actor": actor,
         "subcategory": subcategory,
+        "programName": program_name,
+        "programSlug": slug,
+        "eventType": event_type,
+        "eventDate": event_date,
         "devStartDate": dev_start_date,
         "procurementDate": procurement_date,
         "testDate": test_date,
@@ -141,11 +189,24 @@ def to_milestone(
 
 
 def local_dedupe(items: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Drop within-run duplicates keyed on (lower(name), devStartDate)."""
-    seen: set[tuple[str, str]] = set()
+    """Drop within-run duplicates, mirroring the server's dedup key.
+
+    For lifecycle events (have programSlug + eventType) the key is
+    (programSlug, eventType, eventDate, sourceUrl) so distinct stages of the
+    same program survive; otherwise it falls back to (lower(name), devStartDate).
+    """
+    seen: set[tuple[str, ...]] = set()
     out: list[dict[str, Any]] = []
     for it in items:
-        key = (str(it.get("name", "")).strip().lower(), it.get("devStartDate") or "")
+        if it.get("programSlug") and it.get("eventType"):
+            key = (
+                str(it.get("programSlug")),
+                str(it.get("eventType")),
+                str(it.get("eventDate") or ""),
+                str(it.get("sourceUrl") or ""),
+            )
+        else:
+            key = (str(it.get("name", "")).strip().lower(), str(it.get("devStartDate") or ""))
         if key in seen:
             continue
         seen.add(key)
@@ -182,7 +243,7 @@ def post_batch(
 
     target = url or INGEST_URL
     payload = json.dumps(items).encode("utf-8")
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type": "application/json", "User-Agent": USER_AGENT}
     if INGEST_TOKEN:
         headers["Authorization"] = f"Bearer {INGEST_TOKEN}"
 

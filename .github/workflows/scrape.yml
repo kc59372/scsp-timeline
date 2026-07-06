@@ -4,9 +4,13 @@ name: Scheduled Scrape
 # deployed /api/ingest (they land as PENDING for admin review).
 #
 # Required repository secrets:
-#   INGEST_URL      e.g. https://timeline.example.org/api/ingest
-#   INGEST_TOKEN    must match the deployment's INGEST_TOKEN
-#   SAM_GOV_API_KEY free key from api.sam.gov (optional; sam_gov skips if unset)
+#   INGEST_URL       e.g. https://timeline.example.org/api/ingest
+#   INGEST_TOKEN     must match the deployment's INGEST_TOKEN
+#   SAM_GOV_API_KEY  free key from api.sam.gov (optional; sam_gov skips if unset)
+#   CONGRESS_API_KEY free key from api.congress.gov (optional; congress_gov skips if unset)
+#
+# All sources are official .mil/.gov (no commercial news). Events land PENDING
+# and are grouped into program lifecycles by the admin review queue.
 
 on:
   schedule:
@@ -21,6 +25,7 @@ jobs:
       INGEST_URL: ${{ secrets.INGEST_URL }}
       INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
       SAM_GOV_API_KEY: ${{ secrets.SAM_GOV_API_KEY }}
+      CONGRESS_API_KEY: ${{ secrets.CONGRESS_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -33,12 +38,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r scrapers/requirements.txt
 
-      - name: Defense news RSS
-        run: python scrapers/news_rss.py
-
-      - name: af.mil news
-        run: python scrapers/af_mil.py
-
-      - name: SAM.gov procurement
-        # Skips itself if SAM_GOV_API_KEY is unset (exits 2); don't fail the run.
-        run: python scrapers/sam_gov.py || echo "sam_gov skipped or failed (continuing)"
+      - name: Run .mil/.gov scraper roster (backfill)
+        # backfill.py runs every scraper; individual scrapers that lack an
+        # optional API key exit non-zero and are reported but don't abort here.
+        run: python scrapers/backfill.py --limit 200 || echo "one or more scrapers skipped/failed (continuing)"

@@ -1,0 +1,41 @@
+[
+  {
+    "award_title": "Machine Learning for Autonomous ISR Sensor Fusion",
+    "firm": "Example Autonomy Labs Inc.",
+    "agency": "Department of Defense",
+    "branch": "Air Force",
+    "phase": "Phase II",
+    "program": "SBIR",
+    "contract": "FA8649-24-C-0123",
+    "proposal_award_date": "2024-06-15",
+    "award_amount": "1200000",
+    "award_link": "https://www.sbir.gov/awards/000501",
+    "abstract": "Development of machine learning algorithms for real-time autonomous sensor fusion across ISR platforms."
+  },
+  {
+    "award_title": "Edge AI for Unmanned Undersea Navigation",
+    "firm": "Deep Signal Systems LLC",
+    "agency": "Department of Defense",
+    "branch": "Navy",
+    "phase": "Phase I",
+    "program": "STTR",
+    "contract": "N68335-23-C-0456",
+    "proposal_award_date": "2023-03-01",
+    "award_amount": "180000",
+    "award_link": "https://www.sbir.gov/awards/000502",
+    "abstract": "Feasibility study for embedded artificial intelligence enabling GPS-denied autonomous undersea navigation."
+  },
+  {
+    "award_title": "Ergonomic Office Furniture for Federal Workspaces",
+    "firm": "Comfort Seating Co.",
+    "agency": "Department of Defense",
+    "branch": "Army",
+    "phase": "Phase I",
+    "program": "SBIR",
+    "contract": "W911NF-24-C-0789",
+    "proposal_award_date": "2024-01-10",
+    "award_amount": "150000",
+    "award_link": "https://www.sbir.gov/awards/000503",
+    "abstract": "Design of ergonomic seating for administrative offices."
+  }
+]

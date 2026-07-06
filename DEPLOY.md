@@ -55,28 +55,35 @@ is NOT run automatically. Run it one time against the production DB:
 docker compose -f docker-compose.prod.yml exec web npx prisma db seed
 ```
 
-After this the public timeline at `/` and `/timeline` shows the 16 curated
-entries. Do **not** re-run seed after you've approved scraped data — it would
-wipe it.
+After this the public timeline at `/` and `/timeline` shows the curated seed
+entries — 3 program lifecycle tracks (Maven, GenAI.mil, Manta Ray) plus the
+standalone contracts and policy directives. Do **not** re-run seed after you've
+approved scraped data — it clears the milestone + program tables and would wipe it.
 
 ## 4. Schedule the scrapers
 
 Two options:
 
 **A) GitHub Actions (recommended)** — [.github/workflows/scrape.yml](.github/workflows/scrape.yml)
-runs daily at 06:00 UTC (and on demand). Set repo **Settings → Secrets and
-variables → Actions**:
-- `INGEST_URL` = `https://<your-domain>/api/ingest`
-- `INGEST_TOKEN` = same value as in `.env.production`
-- `SAM_GOV_API_KEY` = your free key (optional)
+runs the whole `.mil`/`.gov` roster via `scrapers/backfill.py` daily at 06:00 UTC
+(and on demand). Set repo **Settings → Secrets and variables → Actions**:
+- `INGEST_URL` = `https://<your-domain>/api/ingest` **(required — without it the
+  scrapers default to `localhost` on the runner and the job fails)**
+- `INGEST_TOKEN` = same value as in `.env.production` **(required)**
+- `SAM_GOV_API_KEY` = free key from api.sam.gov (optional; `sam_gov` skips if unset)
+- `CONGRESS_API_KEY` = free key from api.congress.gov (optional; `congress_gov` skips if unset)
 
-Trigger a manual run from the Actions tab to test.
+USAspending.gov and the `.mil` RSS scrapers need **no key**. Trigger a manual run
+from the Actions tab to test. Note: scheduled workflows run from the repo's
+**default branch**, so this file must be merged there for the cron to fire.
 
-**B) System cron on the host** — if you don't use GitHub:
+**B) System cron on the host** — if you don't use GitHub, run the same roster
+runner:
 ```cron
-0 6 * * *  cd /path/to/repo && INGEST_URL=https://<domain>/api/ingest INGEST_TOKEN=<token> SAM_GOV_API_KEY=<key> scrapers/.venv/bin/python scrapers/news_rss.py
+0 6 * * *  cd /path/to/repo && INGEST_URL=https://<domain>/api/ingest INGEST_TOKEN=<token> SAM_GOV_API_KEY=<key> CONGRESS_API_KEY=<key> scrapers/.venv/bin/python scrapers/backfill.py --limit 200
 ```
-(Repeat per scraper, or wrap them in a small shell script.)
+`backfill.py` runs every scraper in one pass; ones missing an optional key are
+reported and skipped without aborting the rest.
 
 ## 5. Smoke test (post-deploy)
 

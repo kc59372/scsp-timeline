@@ -1,12 +1,14 @@
 "use client";
 
 import type { Milestone } from "@/lib/milestones";
-import { primaryYear } from "@/lib/format";
+import { buildTimelineEntries, type TimelineEntry } from "@/lib/timeline";
 import { MilestoneCard } from "./MilestoneCard";
+import { ProgramCard } from "./ProgramCard";
 
 /**
- * Vertical spine timeline grouped by year. Ports the legacy spine + year-pill
- * layout to Tailwind. Each year header shows a count (density indicator).
+ * Vertical spine timeline grouped by year. Events belonging to a program render
+ * as one lifecycle track (ProgramCard); standalone events render as cards. Each
+ * year header shows a count (density indicator).
  */
 export function Timeline({ milestones }: { milestones: Milestone[] }) {
   if (milestones.length === 0) {
@@ -17,13 +19,14 @@ export function Timeline({ milestones }: { milestones: Milestone[] }) {
     );
   }
 
-  // Group by year (undated → "Undated" bucket at the end).
-  const groups = new Map<string, Milestone[]>();
-  for (const m of milestones) {
-    const y = primaryYear(m);
-    const key = y == null ? "Undated" : String(y);
+  const entries = buildTimelineEntries(milestones);
+
+  // Group by anchor year (undated → "Undated" bucket at the end).
+  const groups = new Map<string, TimelineEntry[]>();
+  for (const e of entries) {
+    const key = e.year == null ? "Undated" : String(e.year);
     if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(m);
+    groups.get(key)!.push(e);
   }
   const sortedKeys = Array.from(groups.keys()).sort((a, b) => {
     if (a === "Undated") return 1;
@@ -44,12 +47,16 @@ export function Timeline({ milestones }: { milestones: Milestone[] }) {
               </span>
             </div>
             <div className="flex flex-col gap-6">
-              {items.map((m) => (
+              {items.map((entry) => (
                 <div
-                  key={m.id}
-                  className="relative before:absolute before:-left-8 before:top-5 before:z-[5] before:h-2 before:w-2 before:-translate-x-[3px] before:rounded-full before:border-2 before:border-ink before:bg-blue-400 before:shadow-[0_0_0_4px_rgba(59,130,246,0.15)]"
+                  key={entry.id}
+                  className={`relative before:absolute before:-left-8 before:top-5 before:z-[5] before:h-2 before:w-2 before:-translate-x-[3px] before:rounded-full before:border-2 before:border-ink ${entry.kind === "program" ? "before:bg-indigo-400 before:shadow-[0_0_0_4px_rgba(99,102,241,0.15)]" : "before:bg-blue-400 before:shadow-[0_0_0_4px_rgba(59,130,246,0.15)]"}`}
                 >
-                  <MilestoneCard milestone={m} />
+                  {entry.kind === "program" ? (
+                    <ProgramCard program={entry.program} events={entry.events} />
+                  ) : (
+                    <MilestoneCard milestone={entry.milestone} />
+                  )}
                 </div>
               ))}
             </div>

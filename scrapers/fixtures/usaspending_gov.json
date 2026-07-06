@@ -1,0 +1,27 @@
+{
+  "results": [
+    {
+      "internal_id": 111111,
+      "Award ID": "W58RGZ20C0001",
+      "Recipient Name": "PALANTIR USG INC",
+      "Award Amount": 91176843.61,
+      "Awarding Agency": "Department of Defense",
+      "Awarding Sub Agency": "Department of the Army",
+      "Start Date": "2020-09-29",
+      "Description": "PALANTIR SHALL PERFORM TESTING AN END-TO-END APPROACH FOR AI/ML TARGETING",
+      "generated_internal_id": "CONT_AWD_W58RGZ20C0001_2100"
+    },
+    {
+      "internal_id": 222222,
+      "Award ID": "FA875019C0012",
+      "Recipient Name": "MORSECORP, INC",
+      "Award Amount": 29932547.63,
+      "Awarding Agency": "Department of Defense",
+      "Awarding Sub Agency": "Department of the Air Force",
+      "Start Date": "2019-09-30",
+      "Description": "NOVEL ARTIFICIAL INTELLIGENCE (AI)/MACHINE LEARNING FOR AUTONOMOUS SYSTEMS",
+      "generated_internal_id": "CONT_AWD_FA875019C0012_9700"
+    }
+  ],
+  "page_metadata": { "page": 1, "hasNext": false }
+}
