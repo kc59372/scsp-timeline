@@ -9,6 +9,7 @@ and program-merge.
 Sources (all official .mil/.gov — no commercial news):
   sam_gov      SAM.gov contracts (solicitations + awards)   → 2016→present (needs key)
   usaspending_gov  USAspending.gov DoD AI contract awards   → 2016→present (no key)
+  dvids_gov    DVIDS DoD news / press releases              → 2016→present (needs key)
   darpa_mil    DARPA programs / news                         → RD_START, TEST
   af_mil       af.mil news                                   → fielding/deploy
   army_mil     army.mil news                                 → fielding/deploy
@@ -36,6 +37,7 @@ HERE = Path(__file__).parent
 ROSTER: list[tuple[str, list[str]]] = [
     ("sam_gov.py", ["--posted-from", "01/01/2016"]),
     ("usaspending_gov.py", ["--since", "01/01/2016"]),
+    ("dvids_gov.py", ["--since", "2016-01-01", "--limit", "500"]),
     ("darpa_mil.py", []),
     ("af_mil.py", []),
     ("army_mil.py", []),

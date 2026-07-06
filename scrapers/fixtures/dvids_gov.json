@@ -1,0 +1,38 @@
+{
+  "page_info": { "total_results": 3, "results_per_page": 3 },
+  "results": [
+    {
+      "id": "500001",
+      "type": "news",
+      "title": "Army unit pioneers AI solutions for logistics planning",
+      "short_description": "A sustainment command fielded a machine learning tool to accelerate logistics planning during an exercise.",
+      "branch": "Army",
+      "unit_name": "75th Innovation Command",
+      "url": "https://www.dvidshub.net/news/500001/army-unit-pioneers-ai-logistics",
+      "date_published": "2019-05-14T12:00:00Z",
+      "date": "2019-05-14T12:00:00Z"
+    },
+    {
+      "id": "500002",
+      "type": "news",
+      "title": "Navy tests autonomous unmanned surface vessel prototype",
+      "short_description": "The Navy evaluated an autonomous unmanned surface vessel during a demonstration off the coast.",
+      "branch": "Navy",
+      "unit_name": "Naval Sea Systems Command",
+      "url": "https://www.dvidshub.net/news/500002/navy-tests-autonomous-usv",
+      "date_published": "2021-09-22T12:00:00Z",
+      "date": "2021-09-22T12:00:00Z"
+    },
+    {
+      "id": "500003",
+      "type": "news",
+      "title": "Base holds annual fun run for families",
+      "short_description": "Service members and families gathered for a morale 5K run over the weekend.",
+      "branch": "Air Force",
+      "unit_name": "Some Wing",
+      "url": "https://www.dvidshub.net/news/500003/base-fun-run",
+      "date_published": "2020-06-01T12:00:00Z",
+      "date": "2020-06-01T12:00:00Z"
+    }
+  ]
+}

@@ -24,7 +24,9 @@ Fill in `.env.production`:
 - `NEXTAUTH_SECRET` — `openssl rand -base64 32`.
 - `ADMIN_EMAIL` + `ADMIN_PASSWORD_HASH` — generate the hash:
   `npx ts-node scripts/hash_password.ts '<password>'`
-  (No `$`-escaping needed in this container env file — unlike a local shell `.env`.)
+  ⚠️ **Escape every `$` in the hash as `$$`** — Docker Compose interpolates
+  `env_file` values, so an unescaped bcrypt hash is mangled and login fails
+  silently. The script prints the ready-to-paste `$$`-escaped form on stderr.
 - `INGEST_TOKEN` — `openssl rand -hex 32`. **Required** so `/api/ingest` is not
   open to the public.
 

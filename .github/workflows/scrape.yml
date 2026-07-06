@@ -8,6 +8,7 @@ name: Scheduled Scrape
 #   INGEST_TOKEN     must match the deployment's INGEST_TOKEN
 #   SAM_GOV_API_KEY  free key from api.sam.gov (optional; sam_gov skips if unset)
 #   CONGRESS_API_KEY free key from api.congress.gov (optional; congress_gov skips if unset)
+#   DVIDS_API_KEY    public key from api.dvidshub.net (optional; dvids_gov skips if unset)
 #
 # All sources are official .mil/.gov (no commercial news). Events land PENDING
 # and are grouped into program lifecycles by the admin review queue.
@@ -26,6 +27,7 @@ jobs:
       INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
       SAM_GOV_API_KEY: ${{ secrets.SAM_GOV_API_KEY }}
       CONGRESS_API_KEY: ${{ secrets.CONGRESS_API_KEY }}
+      DVIDS_API_KEY: ${{ secrets.DVIDS_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
