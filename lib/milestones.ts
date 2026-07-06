@@ -58,6 +58,8 @@ export interface Milestone {
   awardedTo: string | null;
   significance: number;
   reviewNote: string | null;
+  /** Verifier rationale set at ingest (why auto-approved / queued / rejected). */
+  verifyReason: string | null;
   createdAt: string;
   updatedAt: string;
   tags: Tag[];

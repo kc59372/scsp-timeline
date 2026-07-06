@@ -76,7 +76,10 @@ Three primary research documents inform this project, produced by Amy, Kaci, and
 │   └── AdoptionVelocityChart.tsx    ← Milestones-per-year trend chart
 ├── lib/
 │   ├── db.ts                        ← Prisma client
-│   └── auth.ts                      ← NextAuth config
+│   ├── auth.ts                      ← NextAuth config
+│   ├── ingest.ts                    ← scraped-payload normalization + dedup hashing
+│   ├── registry.ts                  ← TS view of scrapers/programs.json (matchProgram)
+│   └── verify.ts                    ← ingest verification: relevance + auto-approval gate
 ├── prisma/
 │   ├── schema.prisma
 │   └── seed.ts                      ← Seed from team's research data
@@ -351,7 +354,9 @@ and public-domain DoD sources. Each scraper emits normalized events (with an
   daily GitHub Action and for the one-time historical backfill.
 
 **Constraints:**
-- All scrapers output `entryStatus: PENDING` — nothing auto-approves
+- Scrapers output `entryStatus: PENDING`; the server-side verifier (`lib/verify.ts`)
+  then sets the final status on ingest (may auto-approve high-confidence tracked
+  programs or auto-reject clearly-irrelevant entries) — see the ingest task below
 - Every entry must include `sourceUrl` and `sourceName`
 - Paginate/handle rate limits; server upserts by an event dedup hash
 - US sources only; `.mil`/`.gov` + public-domain DoD only (copyright)
@@ -442,7 +447,27 @@ and public-domain DoD sources. Each scraper emits normalized events (with an
    - `GET /api/programs` (list) · `GET /api/programs/[id]` (program + its events)
 5. **`app/api/ingest/route.ts`** — Scraper ingest:
    - Token-gated (`INGEST_TOKEN`); upserts the `Program` by slug and links the event
-   - Event dedup hash (`sha256(slug|eventType|eventDate|sourceUrl)`); always `PENDING`
+   - Event dedup hash (`sha256(slug|eventType|eventDate|sourceUrl)`)
+   - **Verification gate (`lib/verify.ts`)** runs on each *new* event to set
+     `entryStatus` (instead of a blanket `PENDING`), cutting review load:
+     - **Auto-approve → `APPROVED`:** names a curated program (`scrapers/programs.json`)
+       **and** high significance (`significance ≥ 4`, e.g. ≥ $100M awards).
+     - **Queue → `PENDING`:** relevant by rule (program match, or the shared
+       AI/autonomy keyword filter) — needs human review / merge.
+     - **Adjudicate (LLM):** entries with no keyword signal go to Claude
+       (`ANTHROPIC_API_KEY`) — relevant → `PENDING`, irrelevant → `REJECTED`.
+       The LLM never auto-approves; if the key is unset or the call fails, the
+       entry safely defaults to `PENDING`.
+     - Keyword-relevant items in an academic/personnel framing with no
+       operational/procurement signal (e.g. a graduate profile that mentions
+       "machine learning") are routed to the LLM rather than auto-queued, so
+       they can be rejected; operational items (e.g. an "unmanned … exercise")
+       pass straight to review.
+     - Each verdict's rationale is stored on `Milestone.verifyReason` and shown
+       in the admin queue. Re-ingesting an existing event **preserves** its
+       current `entryStatus` (an admin's approve/reject is never re-flipped).
+       Response returns a `verdicts` tally; rejected entries stay in the DB
+       (admin `?status=REJECTED`).
 
 **Constraints:**
 - Admin routes 401 if unauthenticated; ingest 401 without the token
@@ -522,7 +547,11 @@ Post-MVP                                                                ✅ Done
 - **Policy-first clarity:** Every milestone must be understandable to a non-technical Washington policymaker. Jargon explained or avoided.
 - **Source integrity:** Every entry needs a `sourceUrl`. No unsourced entries go live. Multiple sources preferred (as in the team's research).
 - **Adoption velocity as a narrative:** The site should convey *how fast* US military AI adoption is accelerating — the core analytical insight per the pitch deck.
-- **Admin trust gate:** Nothing scraped goes public without human review.
+- **Admin trust gate (with a narrow auto-approve):** Scraped entries are reviewed
+  before going public, *except* the high-confidence set that the ingest verifier
+  (`lib/verify.ts`) auto-approves — entries that name a curated program **and**
+  carry a strong significance signal. Everything else still requires human review;
+  clearly-irrelevant entries are auto-rejected (kept in the DB, not deleted).
 - **Speed over perfection:** MVP in 1–2 weeks. Ship working, iterate later.
 - **Future-proof schema:** The `country` field is stubbed in the schema to support future expansion without a migration — but no China-facing features are built now.
 

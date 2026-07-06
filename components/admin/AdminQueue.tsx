@@ -110,7 +110,14 @@ export function AdminQueue({ items }: { items: Milestone[] }) {
                 <td className="p-3">
                   <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggle(m.id)} />
                 </td>
-                <td className="p-3 font-medium text-gray-100">{m.name}</td>
+                <td className="p-3 font-medium text-gray-100">
+                  {m.name}
+                  {m.verifyReason && (
+                    <span className="mt-1 block font-normal text-[0.7rem] italic text-gray-500" title={m.verifyReason}>
+                      auto-check: {m.verifyReason}
+                    </span>
+                  )}
+                </td>
                 <td className="p-3 text-xs">
                   {m.program ? (
                     <span className="rounded bg-indigo-500/10 px-2 py-0.5 text-indigo-300">{m.program.name}</span>

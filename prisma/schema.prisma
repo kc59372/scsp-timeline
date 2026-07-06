@@ -84,6 +84,11 @@ model Milestone {
   // Free-text note recorded by an admin on review (e.g. why rejected).
   reviewNote String?
 
+  // Why the ingest verifier (lib/verify.ts) set entryStatus — machine-generated
+  // at ingest (auto-approved / queued / rejected rationale). Distinct from
+  // reviewNote, which is human-authored. Null for curated seed rows.
+  verifyReason String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   tags      Tag[]
