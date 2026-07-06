@@ -23,7 +23,10 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib import request as urlrequest
 
+import programs  # curated program registry (matcher + focused query terms)
 import utils
+from programs import match_program  # curated cross-source program registry
+from rss import is_relevant  # shared whole-word AI/autonomy relevance gate
 
 API_URL = "https://api.usaspending.gov/api/v2/search/spending_by_award/"
 KEYWORDS = ["artificial intelligence", "machine learning", "autonomous", "unmanned"]
@@ -61,13 +64,18 @@ def map_award(aw: dict[str, Any]) -> dict[str, Any]:
     gid = aw.get("generated_internal_id")
 
     name = desc[:120] if desc else f"DoD AI contract {award_id or ''}".strip()
+    # Link to a known program when the award text names one (else ungrouped, as
+    # before — an admin merges it, e.g. folding a Palantir award into Maven).
+    program = match_program(f"{name} {desc}")
     return utils.to_milestone(
         name=name,
-        category="PROCUREMENT_CONTRACT",
+        category=program["category"] if program else "PROCUREMENT_CONTRACT",
         actor=recipient,
         description=desc,
         source_url=AWARD_URL.format(gid) if gid else "https://www.usaspending.gov/",
         source_name="USAspending.gov",
+        program_name=program["name"] if program else None,
+        program_slug_value=program["slug"] if program else None,
         event_type="AWARD",
         event_date=utils.normalize_date(aw.get("Start Date")),
         procurement_date=utils.normalize_date(aw.get("Start Date")),
@@ -79,13 +87,13 @@ def map_award(aw: dict[str, Any]) -> dict[str, Any]:
     )
 
 
-def fetch_live(since: str, until: str, limit: int) -> list[dict[str, Any]]:
+def fetch_live(since: str, until: str, limit: int, keywords: list[str] | None = None) -> list[dict[str, Any]]:
     collected: list[dict[str, Any]] = []
     page = 1
     while len(collected) < limit:
         body = {
             "filters": {
-                "keywords": KEYWORDS,
+                "keywords": keywords or KEYWORDS,
                 "award_type_codes": CONTRACT_TYPES,
                 "time_period": [{"start_date": _iso(since), "end_date": _iso(until)}],
                 "agencies": [{"type": "awarding", "tier": "toptier", "name": "Department of Defense"}],
@@ -127,21 +135,35 @@ def main() -> int:
         default=datetime.now(timezone.utc).strftime("%m/%d/%Y"),
         help="MM/DD/YYYY (default: today)",
     )
+    parser.add_argument(
+        "--program-focus", action="store_true",
+        help="Search the curated program names/aliases (programs.json) instead of the generic AI keywords.",
+    )
     args = parser.parse_args()
+
+    keywords = programs.program_query_terms() if args.program_focus else None
 
     if args.fixtures:
         raw = json.loads(utils.load_fixture("usaspending_gov.json"))
         awards = (raw.get("results") or [])[: args.limit]
     else:
-        awards = fetch_live(args.since, args.until, args.limit)
+        awards = fetch_live(args.since, args.until, args.limit, keywords)
 
     # Enforce the project's 2016 floor. USAspending's time_period filters on
     # action date, but the displayed Start Date (period-of-performance start) can
     # predate the window, so drop events whose date is before --since's year.
+    # USAspending's server-side `keywords` filter matches the full award text,
+    # so a returned award's short Description can lack any AI term (e.g. generic
+    # "LONG LEAD MATERIALS"). Re-check each with the shared whole-word gate on
+    # name + description (moderate bar) to drop those false positives.
     floor_year = datetime.strptime(args.since, "%m/%d/%Y").year
-    mapped = [m for m in (map_award(a) for a in awards) if _in_scope(m, floor_year)]
+    mapped = [
+        m
+        for m in (map_award(a) for a in awards)
+        if _in_scope(m, floor_year) and is_relevant(f"{m['name']} {m.get('description', '')}")
+    ]
     items = utils.local_dedupe(mapped)
-    print(f"[usaspending] {len(items)} event(s) prepared (>= {floor_year}).", file=sys.stderr)
+    print(f"[usaspending] {len(items)} event(s) prepared (>= {floor_year}, AI-relevant).", file=sys.stderr)
     utils.post_batch(items, dry_run=args.dry_run)
     return 0
 

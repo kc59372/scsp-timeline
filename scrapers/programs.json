@@ -1,0 +1,33 @@
+{
+  "_comment": "Curated registry of known US military AI/autonomy programs — the single source of truth for cross-source lifecycle grouping. Scrapers (programs.py) and the retroactive migration both match item text against this. A match emits the program's slug/name/category so events from ANY source (SAM, USAspending, DVIDS, service RSS) collapse into one Program track; no match stays ungrouped for admin merge. Ordering matters only for overlaps (first match wins) — keep more specific programs earlier. `aliases` match case-insensitively as whole words/phrases; `acronyms` match case-SENSITIVELY as whole words (so lowercase coincidences and ambiguous codes like 'CCA'=Circuit Card Assembly don't false-positive). Reuse a seeded Program's slug to attach news to it. category must be a valid Category enum value.",
+  "programs": [
+    { "slug": "maven-smart-system", "name": "Maven Smart System", "category": "TARGETING", "aliases": ["project maven", "maven smart system", "maven"], "acronyms": [] },
+    { "slug": "replicator-initiative", "name": "Replicator Initiative", "category": "UNMANNED_SYSTEMS", "aliases": ["replicator"], "acronyms": [] },
+    { "slug": "cjadc2", "name": "Combined Joint All-Domain Command and Control (CJADC2)", "category": "COMMAND_CONTROL", "aliases": ["combined joint all-domain command and control", "joint all-domain command and control", "joint all domain command and control"], "acronyms": ["CJADC2", "JADC2"] },
+    { "slug": "project-overmatch", "name": "Project Overmatch", "category": "COMMAND_CONTROL", "aliases": ["project overmatch", "overmatch"], "acronyms": [] },
+    { "slug": "advanced-battle-management-system", "name": "Advanced Battle Management System (ABMS)", "category": "COMMAND_CONTROL", "aliases": ["advanced battle management system", "advanced battle management"], "acronyms": ["ABMS"] },
+    { "slug": "task-force-lima", "name": "Task Force Lima", "category": "POLICY_DIRECTIVE", "aliases": ["task force lima"], "acronyms": [] },
+    { "slug": "project-linchpin", "name": "Project Linchpin", "category": "ISR", "aliases": ["project linchpin", "linchpin"], "acronyms": [] },
+    { "slug": "golden-dome", "name": "Golden Dome", "category": "COMMAND_CONTROL", "aliases": ["golden dome"], "acronyms": [] },
+    { "slug": "thunderforge", "name": "Thunderforge", "category": "COMMAND_CONTROL", "aliases": ["thunderforge"], "acronyms": [] },
+    { "slug": "collaborative-combat-aircraft", "name": "Collaborative Combat Aircraft (CCA)", "category": "UNMANNED_SYSTEMS", "aliases": ["collaborative combat aircraft", "yfq-42a", "yfq-44a", "yfq-42", "yfq-44"], "acronyms": [] },
+    { "slug": "skyborg", "name": "Skyborg", "category": "UNMANNED_SYSTEMS", "aliases": ["skyborg"], "acronyms": [] },
+    { "slug": "manta-ray-xl-uuv", "name": "Northrop Grumman Manta Ray XL-UUV", "category": "UNMANNED_SYSTEMS", "aliases": ["manta ray"], "acronyms": [] },
+    { "slug": "orca-xluuv", "name": "Orca XLUUV", "category": "UNMANNED_SYSTEMS", "aliases": ["orca xluuv", "orca extra-large", "orca extra large"], "acronyms": [] },
+    { "slug": "knifefish-uuv", "name": "Knifefish UUV", "category": "UNMANNED_SYSTEMS", "aliases": ["knifefish"], "acronyms": [] },
+    { "slug": "sea-hunter", "name": "Sea Hunter USV", "category": "UNMANNED_SYSTEMS", "aliases": ["sea hunter"], "acronyms": [] },
+    { "slug": "ghost-shark", "name": "Ghost Shark XL-AUV", "category": "UNMANNED_SYSTEMS", "aliases": ["ghost shark"], "acronyms": [] },
+    { "slug": "genai-mil", "name": "GenAI.mil", "category": "TRAINING_SIMULATION", "aliases": ["genai.mil", "genai mil"], "acronyms": [] },
+    { "slug": "advana", "name": "Advana (War Data Platform)", "category": "COMMAND_CONTROL", "aliases": ["advana", "war data platform"], "acronyms": [] },
+    { "slug": "swarm-forge", "name": "Swarm Forge", "category": "UNMANNED_SYSTEMS", "aliases": ["swarm forge", "swarmforge"], "acronyms": [] },
+    { "slug": "enders-foundry", "name": "Ender's Foundry", "category": "RESEARCH_DEVELOPMENT", "aliases": ["ender's foundry", "enders foundry"], "acronyms": [] },
+    { "slug": "open-arsenal", "name": "Open Arsenal", "category": "RESEARCH_DEVELOPMENT", "aliases": ["open arsenal"], "acronyms": [] },
+    { "slug": "defense-autonomous-warfare-group", "name": "Defense Autonomous Warfare Group (DAWG)", "category": "UNMANNED_SYSTEMS", "aliases": ["defense autonomous warfare group"], "acronyms": ["DAWG"] },
+    { "slug": "xq-58a-valkyrie", "name": "XQ-58A Valkyrie", "category": "UNMANNED_SYSTEMS", "aliases": ["xq-58a valkyrie", "xq-58a", "xq-58"], "acronyms": [] },
+    { "slug": "lucas", "name": "LUCAS (Low-Cost Uncrewed Combat Attack System)", "category": "UNMANNED_SYSTEMS", "aliases": ["low-cost uncrewed combat attack system", "low-cost uncrewed combat attack"], "acronyms": ["LUCAS"] },
+    { "slug": "drone-dominance", "name": "American Drone Dominance", "category": "UNMANNED_SYSTEMS", "aliases": ["drone dominance", "unleashing american drone dominance"], "acronyms": [] },
+    { "slug": "jtaars", "name": "Joint Tactical Autonomous Aerial Resupply System (JTAARS)", "category": "LOGISTICS_SUSTAINMENT", "aliases": ["joint tactical autonomous aerial resupply"], "acronyms": ["JTAARS"] },
+    { "slug": "mq-25-stingray", "name": "MQ-25 Stingray", "category": "UNMANNED_SYSTEMS", "aliases": ["mq-25 stingray", "mq-25"], "acronyms": [] },
+    { "slug": "dronehunter-f700", "name": "Fortem DroneHunter F700", "category": "UNMANNED_SYSTEMS", "aliases": ["dronehunter f700", "dronehunter", "drone hunter f700"], "acronyms": [] }
+  ]
+}

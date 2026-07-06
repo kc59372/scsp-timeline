@@ -11,7 +11,7 @@
  *   ?page / ?pageSize           pagination (pageSize default 500)
  */
 import { NextRequest, NextResponse } from "next/server";
-import { Category, EntryStatus } from "@prisma/client";
+import { Category, EntryStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { normalizeMilestone } from "@/lib/ingest";
@@ -52,11 +52,20 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const pageSize = Math.min(1000, Math.max(1, Number(searchParams.get("pageSize")) || DEFAULT_PAGE_SIZE));
 
+  // Admin review views (anything but the public APPROVED list) surface
+  // program-grouped events first, clustered by program name and ordered by
+  // lifecycle date within each; ungrouped events (null program → NULLS LAST)
+  // fall to the bottom. The public timeline keeps its chronological order.
+  const orderBy: Prisma.MilestoneOrderByWithRelationInput[] =
+    statusFilter === "APPROVED"
+      ? [{ eventDate: "asc" }, { devStartDate: "asc" }, { createdAt: "asc" }]
+      : [{ program: { name: "asc" } }, { eventDate: "asc" }, { createdAt: "asc" }];
+
   const [items, total] = await Promise.all([
     prisma.milestone.findMany({
       where,
       include: { tags: true, program: true },
-      orderBy: [{ eventDate: "asc" }, { devStartDate: "asc" }, { createdAt: "asc" }],
+      orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),

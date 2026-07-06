@@ -17,17 +17,70 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib import error as urlerror
 from urllib import parse as urlparse
 from urllib import request as urlrequest
 
 import utils
+from programs import match_program  # curated cross-source program registry
+from rss import is_relevant  # shared whole-word AI/autonomy relevance gate
 
 API_URL = "https://api.sam.gov/opportunities/v2/search"
 KEYWORDS = ["artificial intelligence", "machine learning", "autonomous", "unmanned"]
 PAGE_SIZE = 100
+
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+class SamQuotaExceeded(Exception):
+    """Raised when SAM.gov returns its daily-quota 429 (code 900804).
+
+    SAM.gov's public key has a hard daily request quota; once hit, every further
+    call fails until the next UTC-midnight reset. We abort the run rather than
+    burn time on doomed calls.
+    """
+
+
+def _looks_like_url(text: str) -> bool:
+    return text.strip().lower().startswith(("http://", "https://"))
+
+
+def _resolve_description(raw: str, api_key: str | None) -> str:
+    """Return plain-text notice context.
+
+    SAM.gov's `description` field is a *URL* to the notice text
+    (api.sam.gov/.../noticedesc?noticeid=…), not the text itself. Fetch it,
+    strip HTML, and return plain text so entries carry real context and can be
+    relevance-checked on content — not just the cryptic FSC-coded title. A
+    non-URL value (e.g. offline fixtures) is returned as-is; a fetch failure or
+    missing key yields "" (the caller then falls back to a title-only check).
+    """
+    raw = (raw or "").strip()
+    if not raw:
+        return ""
+    if not _looks_like_url(raw):
+        return raw
+    if not api_key:
+        return ""
+    url = raw + ("&" if "?" in raw else "?") + urlparse.urlencode({"api_key": api_key})
+    req = urlrequest.Request(url, headers={"Accept": "application/json", "User-Agent": utils.USER_AGENT})
+    try:
+        with urlrequest.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except urlerror.HTTPError as e:  # noqa: PERF203
+        if e.code == 429:  # daily quota exhausted — abort, don't hammer
+            raise SamQuotaExceeded("SAM.gov daily quota exceeded (HTTP 429)") from e
+        print(f"[sam_gov] description fetch failed: {e}", file=sys.stderr)
+        return ""
+    except Exception as e:  # a bad description fetch shouldn't drop the notice
+        print(f"[sam_gov] description fetch failed: {e}", file=sys.stderr)
+        return ""
+    body = data.get("description") if isinstance(data, dict) else None
+    return " ".join(_TAG_RE.sub(" ", str(body)).split()) if body else ""
 
 
 def _money(value: Any) -> float | None:
@@ -54,12 +107,13 @@ def _program_key(op: dict[str, Any]) -> str:
     )
 
 
-def map_opportunity(op: dict[str, Any]) -> dict[str, Any]:
+def map_opportunity(op: dict[str, Any], description: str) -> dict[str, Any]:
     """Map one SAM.gov opportunity record → normalized lifecycle event.
 
     Award notices (have an award amount/awardee) become AWARD events; everything
     else (solicitations, sources-sought, RFIs) becomes a SOLICITATION event.
-    Both link to the same Program via the solicitation number.
+    Both link to the same Program via the solicitation number. `description` is
+    the resolved plain-text notice context (see `_resolve_description`).
     """
     award = op.get("award") if isinstance(op.get("award"), dict) else None
     awardee = (award.get("awardee") or {}).get("name") if award else None
@@ -69,15 +123,21 @@ def map_opportunity(op: dict[str, Any]) -> dict[str, Any]:
     title = op.get("title") or op.get("noticeId") or "Untitled SAM.gov notice"
     posted = utils.normalize_date(op.get("postedDate"))
 
+    # A curated program name is a stronger, cross-source entity key than the
+    # solicitation number: it unifies this contract with the program's news and
+    # other contracts. Fall back to the solicitation number (links a
+    # solicitation to its later award) when no known program is named.
+    program = match_program(f"{title} {description}")
+
     return utils.to_milestone(
         name=title,
-        category="PROCUREMENT_CONTRACT",
+        category=program["category"] if program else "PROCUREMENT_CONTRACT",
         actor=op.get("fullParentPathName") or "US Government",
-        description=op.get("description") or op.get("type") or "",
+        description=description or op.get("type") or "",
         source_url=op.get("uiLink") or f"https://sam.gov/opp/{op.get('noticeId', '')}/view",
         source_name="SAM.gov",
-        program_name=title,
-        program_slug_value=utils.program_slug(_program_key(op)),
+        program_name=program["name"] if program else title,
+        program_slug_value=program["slug"] if program else utils.program_slug(_program_key(op)),
         event_type="AWARD" if is_award else "SOLICITATION",
         event_date=posted,
         # Keep the stage-specific date populated too, for the profile view.
@@ -155,6 +215,7 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.fixtures:
+        api_key = None
         raw = json.loads(utils.load_fixture("sam_gov.json"))
         opportunities = (raw.get("opportunitiesData") or [])[: args.limit]
     else:
@@ -164,8 +225,35 @@ def main() -> int:
             return 2
         opportunities = fetch_live(api_key, args.posted_from, args.posted_to, args.limit)
 
-    items = utils.local_dedupe(map_opportunity(op) for op in opportunities)
-    print(f"[sam_gov] {len(items)} milestone(s) prepared.", file=sys.stderr)
+    # SAM.gov's `q` search matches loosely (e.g. "machine" in "machining"), so
+    # apply the shared whole-word relevance gate on title + fetched notice text
+    # (moderate bar: a hit in either keeps the notice). This also enriches each
+    # entry with real description context in place of the raw notice-desc URL.
+    mapped: list[dict[str, Any]] = []
+    dropped = 0
+    quota_hit = False
+    for op in opportunities:
+        title = op.get("title") or op.get("noticeId") or ""
+        try:
+            description = _resolve_description(op.get("description") or "", api_key)
+        except SamQuotaExceeded as e:
+            print(f"[sam_gov] {e} — stopping early with what we have.", file=sys.stderr)
+            quota_hit = True
+            break
+        if not args.fixtures:
+            utils.polite_sleep(0.5)  # throttle the notice-desc endpoint
+        if not is_relevant(f"{title} {description}"):
+            dropped += 1
+            continue
+        mapped.append(map_opportunity(op, description))
+
+    items = utils.local_dedupe(mapped)
+    note = " [quota hit — partial]" if quota_hit else ""
+    print(
+        f"[sam_gov] {len(items)} milestone(s) prepared "
+        f"({dropped} dropped as not AI-relevant of {len(opportunities)} fetched){note}.",
+        file=sys.stderr,
+    )
     utils.post_batch(items, dry_run=args.dry_run)
     return 0
 

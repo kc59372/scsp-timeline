@@ -26,8 +26,10 @@ from typing import Any
 from urllib import parse as urlparse
 from urllib import request as urlrequest
 
+import programs  # curated program registry (matcher + focused query terms)
 import rss  # relevance + category + event-type inference
 import utils
+from programs import match_program  # curated cross-source program registry
 
 API_URL = "https://api.dvidshub.net/search"
 KEYWORDS = ["artificial intelligence", "machine learning", "autonomous", "unmanned"]
@@ -45,23 +47,27 @@ def map_result(r: dict[str, Any]) -> dict[str, Any] | None:
         return None
 
     branch = r.get("branch") or "DoD"
+    # Cross-source grouping via the curated registry; unknown → ungrouped.
+    program = match_program(haystack)
     return utils.to_milestone(
         name=title,
-        category=rss.infer_category(haystack),
+        category=program["category"] if program else rss.infer_category(haystack),
         actor=r.get("unit_name") or branch,
         description=summary,
         source_url=url,
         source_name=f"DVIDS ({branch})",
+        program_name=program["name"] if program else None,
+        program_slug_value=program["slug"] if program else None,
         event_type=rss.infer_event_type(haystack, "OTHER"),
         event_date=utils.normalize_date(r.get("date_published") or r.get("date")),
         significance=2,
     )
 
 
-def fetch_live(api_key: str, since: str, limit: int) -> list[dict[str, Any]]:
+def fetch_live(api_key: str, since: str, limit: int, keywords: list[str] | None = None) -> list[dict[str, Any]]:
     """Page DVIDS news across keywords, deduped by article id, up to `limit`."""
     by_id: dict[str, dict[str, Any]] = {}
-    for keyword in KEYWORDS:
+    for keyword in keywords or KEYWORDS:
         page = 1
         while len(by_id) < limit:
             params = {
@@ -99,7 +105,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="DVIDS historical DoD AI news scraper")
     utils.add_common_args(parser)
     parser.add_argument("--since", default="2016-01-01", help="YYYY-MM-DD (default 2016-01-01)")
+    parser.add_argument(
+        "--program-focus", action="store_true",
+        help="Search the curated program names/aliases (programs.json) instead of the generic AI keywords.",
+    )
     args = parser.parse_args()
+
+    keywords = programs.program_query_terms() if args.program_focus else None
 
     if args.fixtures:
         raw = json.loads(utils.load_fixture("dvids_gov.json"))
@@ -109,7 +121,7 @@ def main() -> int:
         if not api_key:
             print("ERROR: DVIDS_API_KEY not set (or use --fixtures).", file=sys.stderr)
             return 2
-        results = fetch_live(api_key, args.since, args.limit)
+        results = fetch_live(api_key, args.since, args.limit, keywords)
 
     items = utils.local_dedupe(m for m in (map_result(r) for r in results) if m)
     print(f"[dvids] {len(items)} event(s) prepared.", file=sys.stderr)
