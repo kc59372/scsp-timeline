@@ -18,7 +18,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib import parse as urlparse
 from urllib import request as urlrequest
@@ -90,32 +90,56 @@ def map_opportunity(op: dict[str, Any]) -> dict[str, Any]:
     )
 
 
-def fetch_live(api_key: str, posted_from: str, posted_to: str, limit: int) -> list[dict[str, Any]]:
-    """Paginate the Opportunities API across all keywords up to `limit` items."""
-    collected: list[dict[str, Any]] = []
-    for keyword in KEYWORDS:
-        offset = 0
-        while len(collected) < limit:
-            params = {
-                "api_key": api_key,
-                "q": keyword,
-                "postedFrom": posted_from,
-                "postedTo": posted_to,
-                "limit": min(PAGE_SIZE, limit - len(collected)),
-                "offset": offset,
-            }
-            url = f"{API_URL}?{urlparse.urlencode(params)}"
-            req = urlrequest.Request(url, headers={"Accept": "application/json", "User-Agent": utils.USER_AGENT})
-            with urlrequest.urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
+def _date_windows(posted_from: str, posted_to: str) -> list[tuple[str, str]]:
+    """Split [posted_from, posted_to] into ≤1-year MM/DD/YYYY windows.
 
-            page = data.get("opportunitiesData") or []
-            collected.extend(page)
-            total = int(data.get("totalRecords") or 0)
-            offset += len(page)
-            if not page or offset >= total:
-                break
-            utils.polite_sleep(1.0)
+    The SAM.gov Opportunities API rejects ranges longer than one year (HTTP 400),
+    so a historical 2016→present backfill must be chunked.
+    """
+    start = datetime.strptime(posted_from, "%m/%d/%Y")
+    end = datetime.strptime(posted_to, "%m/%d/%Y")
+    windows: list[tuple[str, str]] = []
+    while start <= end:
+        # 364 days keeps each window strictly under the 1-year limit.
+        win_end = min(start + timedelta(days=364), end)
+        windows.append((start.strftime("%m/%d/%Y"), win_end.strftime("%m/%d/%Y")))
+        start = win_end + timedelta(days=1)
+    return windows
+
+
+def fetch_live(api_key: str, posted_from: str, posted_to: str, limit: int) -> list[dict[str, Any]]:
+    """Paginate the Opportunities API across all keywords and ≤1-year windows."""
+    collected: list[dict[str, Any]] = []
+    windows = _date_windows(posted_from, posted_to)
+    for win_from, win_to in windows:
+        for keyword in KEYWORDS:
+            offset = 0
+            while len(collected) < limit:
+                params = {
+                    "api_key": api_key,
+                    "q": keyword,
+                    "postedFrom": win_from,
+                    "postedTo": win_to,
+                    "limit": min(PAGE_SIZE, limit - len(collected)),
+                    "offset": offset,
+                }
+                url = f"{API_URL}?{urlparse.urlencode(params)}"
+                req = urlrequest.Request(url, headers={"Accept": "application/json", "User-Agent": utils.USER_AGENT})
+                try:
+                    with urlrequest.urlopen(req, timeout=30) as resp:
+                        data = json.loads(resp.read().decode("utf-8"))
+                except Exception as e:  # one bad window/keyword shouldn't kill the run
+                    print(f"[sam_gov] {keyword} {win_from}-{win_to} failed: {e}", file=sys.stderr)
+                    break
+                page = data.get("opportunitiesData") or []
+                collected.extend(page)
+                total = int(data.get("totalRecords") or 0)
+                offset += len(page)
+                if not page or offset >= total:
+                    break
+                utils.polite_sleep(1.0)
+            if len(collected) >= limit:
+                return collected[:limit]
     return collected[:limit]
 
 

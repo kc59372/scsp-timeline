@@ -37,6 +37,7 @@ can show a system progress from request → award → test → fielding → depl
 | `spaceforce_mil.py` | spaceforce.mil news (RSS) | `FIELDING` |
 | `defense_gov.py` | defense.gov DoD News (RSS) | `OTHER` |
 | `gao_gov.py` | gao.gov reports (RSS) | `POLICY` |
+| `dvids_gov.py` | DVIDS news API (`api.dvidshub.net`) — **historical news to 2016**, needs key | inferred |
 | `congress_gov.py` | Congress.gov API (`api.congress.gov`) | `POLICY` |
 | `sbir_gov.py` | SBIR.gov awards API (open) | `RD_START` |
 | `rss.py` | shared RSS machinery (relevance + category + event-type inference) | — |
@@ -59,6 +60,7 @@ scrapers/.venv/bin/pip install -r scrapers/requirements.txt
 |---|---|---|
 | `SAM_GOV_API_KEY` | `sam_gov.py` | Free key — https://open.gsa.gov/api/get-opportunities-public-api/ |
 | `CONGRESS_API_KEY` | `congress_gov.py` | Free key — https://api.congress.gov/sign-up/ |
+| `DVIDS_API_KEY` | `dvids_gov.py` | Free **public** key — https://api.dvidshub.net (pass the `key-…` public key) |
 | `INGEST_URL` | all | Defaults to `http://localhost:3000/api/ingest` |
 | `INGEST_TOKEN` | all | Bearer token for `/api/ingest` in production (see DEPLOY.md) |
 
@@ -119,11 +121,16 @@ cannot reach 2016. Historical depth comes from the two **award APIs**:
   period-of-performance start dates predate the window and are dropped).
 - **`sam_gov.py`** — richer (solicitations + awards) but needs a free key.
 
+For historical **news / press releases** (pre-2026), `dvids_gov.py` uses the
+DVIDS API (official DoD public-domain media) — searchable back to 2016, unlike
+the recent-only RSS feeds. `sam_gov.py` chunks its 2016→present range into
+≤1-year windows (the SAM API rejects longer ranges with HTTP 400).
+
 Direct HTML scraping of the sites' search/archive pages was investigated and is
 **not viable** without a headless browser: defense.gov / af.mil / gao.gov return
 Akamai `403 Access Denied` to plain HTTP (even with a browser UA), and
 army.mil's listing paginates via JS (no URL-addressable pages). USAspending.gov
-replaces that need for procurement data.
+(procurement) and DVIDS (news) replace that need.
 
 ## Out of scope (later phases)
 
