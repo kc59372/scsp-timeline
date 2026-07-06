@@ -6,7 +6,9 @@ A **US military AI adoption tracker** for Washington policymakers and Silicon Va
 
 Visual design reference: [SCSP Space Race](https://www.scsp.ai/space-race/)
 
-**Mode:** Plan mode — all agents operate in plan/draft mode only. No code is executed, no files are written, no database mutations occur unless explicitly approved.
+**Status:** MVP built and operational (Phases 1–6 complete), plus two post-MVP additions — **program-lifecycle tracking** (events grouped into program tracks) and a **historical `.mil`/`.gov` backfill** to 2016. This document is the product spec + build history and the source of truth; keep it in sync as the system evolves.
+
+**Sourcing policy:** ingestion is restricted to official **.mil / .gov** endpoints and public-domain DoD media (DVIDS). Commercial news feeds (Breaking Defense, DefenseScoop, C4ISRNET, etc.) were removed to avoid copyright issues.
 
 ---
 
@@ -28,7 +30,7 @@ Three primary research documents inform this project, produced by Amy, Kaci, and
 2. Populate a PostgreSQL database with the seed data from the team's research (US systems + procurement contracts)
 3. Build a public-facing **Next.js / React** timeline website styled after SCSP Space Race
 4. Build an **admin dashboard** for a small team (2–5 people) to review, approve, and edit scraped entries
-5. Set up automated **web scraping + API ingestion** pipelines targeting SAM.gov, defense news sources, and official military sites
+5. Set up automated **web scraping + API ingestion** pipelines targeting official `.mil`/`.gov` sources (SAM.gov, USAspending.gov, DVIDS, Congress.gov, service news feeds)
 6. Track **adoption velocity** — how the speed of US military AI adoption has changed over the 2016–2026 window
 
 > **Stretch Goal (out of scope for MVP):** US vs. China comparison. The schema will include a `country` field stubbed in so this can be added later without a migration, but no China data, scrapers, or UI will be built now.
@@ -42,10 +44,10 @@ Three primary research documents inform this project, produced by Amy, Kaci, and
 | Frontend | Next.js 14 (App Router) + React + Tailwind CSS |
 | Database | PostgreSQL (via Prisma ORM) |
 | Backend/API | Next.js API routes (serverless) |
-| Scraping | Python (BeautifulSoup / Playwright) |
-| Auth (admin) | NextAuth.js (credentials-based for MVP) |
-| Hosting | Vercel (frontend) + Railway or Supabase (Postgres) — recommended for fast MVP |
-| Data ingestion | GitHub Actions cron for scheduled scraping |
+| Scraping | Python 3 (`urllib` + `feedparser`); official `.mil`/`.gov` + public-domain DoD APIs/RSS only |
+| Auth (admin) | NextAuth.js — single shared credential (env-based) |
+| Hosting | **Docker Compose self-host** (app + Postgres) — see `DEPLOY.md`. (Vercel + managed Postgres also works; Docker is what's implemented.) |
+| Data ingestion | GitHub Actions cron (daily) → token-protected `/api/ingest` |
 
 ---
 
@@ -55,15 +57,18 @@ Three primary research documents inform this project, produced by Amy, Kaci, and
 /
 ├── CLAUDE.md                        ← this file
 ├── app/                             ← Next.js App Router
-│   ├── page.tsx                     ← Public timeline homepage
+│   ├── page.tsx                     ← Homepage (featured program tracks + velocity)
 │   ├── timeline/                    ← Full timeline with filters
-│   ├── system/[id]/                 ← Individual system/milestone profile page
+│   ├── system/[id]/                 ← Individual event profile page
+│   ├── program/[id]/                ← Program lifecycle profile (all stages)
 │   ├── admin/
-│   │   ├── page.tsx                 ← Pending review queue
+│   │   ├── page.tsx                 ← Pending review queue + merge-by-program
 │   │   └── [id]/edit/page.tsx       ← Edit individual entry
 │   └── api/
 │       ├── milestones/route.ts      ← CRUD API
-│       └── ingest/route.ts          ← Scraper webhook receiver
+│       ├── milestones/merge/route.ts ← group events into a program (admin)
+│       ├── programs/route.ts        ← list/create programs; [id] = program + events
+│       └── ingest/route.ts          ← Scraper ingest (upserts programs, token-gated)
 ├── components/
 │   ├── Timeline.tsx                 ← Core timeline visualization
 │   ├── MilestoneCard.tsx            ← Individual event card
@@ -75,12 +80,18 @@ Three primary research documents inform this project, produced by Amy, Kaci, and
 ├── prisma/
 │   ├── schema.prisma
 │   └── seed.ts                      ← Seed from team's research data
-├── scrapers/
+├── scrapers/                        ← .mil/.gov-only ingestion roster
 │   ├── README.md
-│   ├── sam_gov.py                   ← SAM.gov procurement scraper
-│   ├── news_rss.py                  ← Defense news RSS scraper
-│   ├── af_mil.py                    ← af.mil official news scraper
-│   └── utils.py                     ← Shared dedup, rate limiting, POST to API
+│   ├── backfill.py                  ← runs the whole roster in one pass
+│   ├── sam_gov.py                   ← SAM.gov solicitations + awards (chunked ≤1yr)
+│   ├── usaspending_gov.py           ← USAspending.gov DoD awards (no key, historical)
+│   ├── dvids_gov.py                 ← DVIDS DoD news / press releases (historical)
+│   ├── congress_gov.py              ← Congress.gov AI legislation
+│   ├── sbir_gov.py                  ← SBIR/STTR DoD AI awards
+│   ├── af_mil.py / army_mil.py / navy_mil.py / spaceforce_mil.py
+│   ├── darpa_mil.py / defense_gov.py / gao_gov.py   ← per-agency RSS
+│   ├── rss.py                       ← shared RSS relevance + category/event inference
+│   └── utils.py                     ← dedup, dates, program_slug, POST to API
 ├── scripts/
 │   └── seed_db.ts
 ├── .github/workflows/
@@ -94,7 +105,29 @@ Three primary research documents inform this project, produced by Amy, Kaci, and
 
 Derived from the team's spreadsheet schema (`NAME, DEV. START, DEPLOYMENT, DETAILS, STATUS, SOURCE(s)`) plus the procurement contracts index:
 
+A `Program` groups the lifecycle **events** of a single system/initiative. A
+`Milestone` is one dated event in that lifecycle (tagged with an `EventType`),
+optionally linked to a `Program` via `programId`. Scrapers assign a stable
+`slug` for cross-source auto-linking; unmatched events land ungrouped and an
+admin merges them. `programId = null` means a standalone event.
+
 ```prisma
+model Program {
+  id           String        @id @default(cuid())
+  slug         String        @unique                   // entity-resolution key
+  name         String
+  description  String        @default("")
+  actor        String
+  country      Country       @default(US)
+  category     Category
+  subcategory  String?
+  systemStatus SystemStatus?                            // derived from furthest-along event
+  significance Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  events       Milestone[]
+}
+
 model Milestone {
   id               String        @id @default(cuid())
   name             String                              // System/initiative name
@@ -103,6 +136,12 @@ model Milestone {
   country          Country       @default(US)          // Stubbed for future expansion
   category         Category
   subcategory      String?                             // e.g. "Counter-UAS", "C2", "Unmanned Maritime"
+
+  // Lifecycle grouping — a Milestone is one dated event in a Program's lifecycle
+  programId        String?                             // null = standalone event
+  program          Program?      @relation(fields: [programId], references: [id], onDelete: SetNull)
+  eventType        EventType?                           // which lifecycle stage this is
+  eventDate        DateTime?                            // stage-agnostic date of this event
 
   // Key dates (all nullable — some are unknown per the research data)
   devStartDate     DateTime?
@@ -171,6 +210,19 @@ enum SystemStatus {
   UNKNOWN
 }
 
+// A single stage in a Program's lifecycle, ordered roughly by maturity so the
+// server can derive a Program's systemStatus from its furthest-along event.
+enum EventType {
+  RD_START        // R&D / dev start (DARPA program, SBIR award)
+  SOLICITATION    // RFI / solicitation posted
+  AWARD           // contract awarded
+  TEST            // test / evaluation event
+  FIELDING        // initial fielding
+  DEPLOYMENT      // full operational deployment
+  POLICY          // policy / directive / oversight
+  OTHER           // uncategorized lifecycle event
+}
+
 model Tag {
   id          String      @id @default(cuid())
   name        String      @unique
@@ -191,6 +243,11 @@ The Database Agent must seed the following verified US entries from the team's d
 | Maven Smart System | Palantir / DoD | TARGETING | Apr 2017 | Dec 2025 / May 2026 | FIELDED |
 | GenAI.mil | USAF 732nd AMS | TRAINING_SIMULATION | Dec 2025 | Jun 2026 | FIELDED |
 | Northrop Grumman MantaRay XL-UUV | Northrop Grumman / DARPA | UNMANNED_SYSTEMS | 2020 | Feb–Mar 2024 (test) | TESTING |
+
+> Each of these three is seeded as a **`Program`** whose dates become lifecycle
+> **events** (e.g. Maven → `RD_START` 2017 → `AWARD` 2024 → `TEST` 2025 →
+> `DEPLOYMENT` 2026). The Maven ATR contract from the procurement table below is
+> folded in as Maven's `AWARD` event rather than seeded as a standalone contract.
 
 ### US Procurement Contracts (from Verified Procurement Index in spreadsheet)
 
@@ -230,12 +287,12 @@ This project uses an **orchestrator + subagent** pattern. The orchestrator reads
 **Role:** Project coordinator. Reads CLAUDE.md, breaks work into phases, assigns subagent tasks, validates outputs before marking steps complete.
 
 **Instructions:**
-- Always operate in **plan mode** — present plans for approval before any execution
+- Present a plan for approval before large or destructive changes (migrations, deploys, bulk deletes)
 - Track completed phases with a checklist in responses
-- Never invoke a subagent for a later phase until the prior phase is approved
 - Surface all blockers and open decisions to the human immediately
 - Reference the seed data tables above when validating Database Agent output
 - Do not build, reference, or stub any China-facing features, scrapers, or UI elements
+- Ingest only from `.mil`/`.gov` + public-domain DoD sources (no commercial news)
 
 ---
 
@@ -265,36 +322,39 @@ This project uses an **orchestrator + subagent** pattern. The orchestrator reads
 
 ### Subagent 2 — Scraper Agent
 
-**Role:** Build automated data ingestion pipelines targeting US defense sources.
+**Role:** Ingest US military AI lifecycle **events** from official `.mil`/`.gov`
+and public-domain DoD sources. Each scraper emits normalized events (with an
+`eventType`, `eventDate`, and — where confident — a `programSlug`) that POST to
+`/api/ingest`. Full details in [`scrapers/README.md`](./scrapers/README.md).
 
-**Sources (from pitch deck + brainstorming doc):**
-- SAM.gov — procurement contracts and RFIs (primary source per pitch deck)
-- af.mil/News — official Air Force AI announcements
-- Breaking Defense, DefenseScoop, C4ISRNET — defense news RSS
-- DARPA.mil — program announcements
-- Congress.gov — NDAA provisions, hearings
+**Sources (all `.mil`/`.gov` or public-domain DoD — no commercial news):**
 
-**Tasks:**
-1. **`scrapers/sam_gov.py`** — SAM.gov procurement scraper:
-   - Search keywords: "artificial intelligence", "machine learning", "autonomous", "unmanned"
-   - Date range: 2016–present
-   - Extract: notice ID, agency, awardee, value, description
-   - Output: normalized JSON matching Milestone schema, `category=PROCUREMENT_CONTRACT`, `entryStatus=PENDING`
-2. **`scrapers/news_rss.py`** — Defense news RSS scraper:
-   - Sources: Breaking Defense, DefenseScoop, C4ISRNET, af.mil/News, DARPA news
-   - Output: normalized JSON, category inferred from content, `entryStatus=PENDING`
-3. **`scrapers/af_mil.py`** — af.mil official announcements scraper
-4. **`scrapers/utils.py`** — shared utilities:
-   - Deduplication by hash(name + devStartDate)
-   - Rate limiting and polite crawl delays
-   - Output writer that POSTs to `/api/ingest`
-   - Date parser that handles partial dates (year only, year+month)
+| Source | Reach | Key |
+|---|---|---|
+| SAM.gov (solicitations + awards) | 2016→present (chunked ≤1yr/call) | free |
+| USAspending.gov (DoD contract awards) | 2016→present | none |
+| DVIDS (DoD news / press releases) | 2016→present (historical) | free public |
+| Congress.gov (AI legislation) | recent (title search) | free |
+| SBIR.gov (DoD SBIR/STTR awards) | historical | none |
+| af / army / navy / spaceforce / darpa / defense / gao (RSS) | recent (~1yr at `max=500`) | none |
+
+**Design:**
+- **Lifecycle grouping** — SAM.gov/USAspending/SBIR carry a stable key and
+  auto-link into a `Program`; RSS/DVIDS items are emitted ungrouped (a headline
+  is an unreliable key) for admin merge.
+- **`scrapers/rss.py`** — shared feed machinery: relevance filter, category +
+  event-type inference; enforces `.mil`/`.gov` hosts.
+- **`scrapers/utils.py`** — dates (incl. ISO + partial), `program_slug`,
+  within-run dedup, ingest POST. Sets a real `User-Agent` (default
+  `Python-urllib` gets 403'd by `.gov` WAFs).
+- **`scrapers/backfill.py`** — runs the whole roster in one pass; used by the
+  daily GitHub Action and for the one-time historical backfill.
 
 **Constraints:**
-- All scrapers output `entryStatus: "PENDING"` — nothing auto-approves
+- All scrapers output `entryStatus: PENDING` — nothing auto-approves
 - Every entry must include `sourceUrl` and `sourceName`
-- SAM.gov scraper must handle pagination
-- US sources only — no international scraping targets in MVP
+- Paginate/handle rate limits; server upserts by an event dedup hash
+- US sources only; `.mil`/`.gov` + public-domain DoD only (copyright)
 
 ---
 
@@ -312,8 +372,11 @@ This project uses an **orchestrator + subagent** pattern. The orchestrator reads
 1. **Interactive Timeline** (`components/Timeline.tsx`):
    - Vertical scrollable timeline grouped by year (2016–2026)
    - Color-coded by `Category` enum
-   - Click to expand → system detail / "adoption profile"
-   - Visual density indicator showing milestone clustering by year
+   - **Program lifecycle tracks** (`components/ProgramCard.tsx`): events belonging
+     to a program render as one track (request → award → test → deployment),
+     anchored at the program's earliest event; standalone events render as cards
+   - Click a track → `/program/[id]` profile; click an event → `/system/[id]`
+   - Visual density indicator showing clustering by year
 
 2. **Category Filters** (`components/FilterBar.tsx`) — from pitch deck:
    - Unmanned Vehicles
@@ -327,12 +390,13 @@ This project uses an **orchestrator + subagent** pattern. The orchestrator reads
    - Training / Simulation
    - Date range slider (2016–2026)
 
-3. **System Profile Pages** (`app/system/[id]/page.tsx`) — "adoption profiles" per pitch deck:
-   - Full description, all dates (dev start → procurement → test → fielding → deployment)
-   - All source links
-   - Contract value (if applicable)
-   - Related systems/tags
-   - Test location (if available)
+3. **Profile Pages** — "adoption profiles" per pitch deck:
+   - **Program profile** (`app/program/[id]/page.tsx`): the full lifecycle track —
+     every stage in order (with type, date, contract value), derived status, and
+     aggregated sources across all events.
+   - **Event profile** (`app/system/[id]/page.tsx`): a single event's detail; if
+     it belongs to a program, a banner links to the program lifecycle.
+   - All source links, contract value, test location where available.
 
 4. **Adoption Velocity Chart** (`components/AdoptionVelocityChart.tsx`):
    - Bar or line chart: milestones per year 2016–2026
@@ -359,32 +423,30 @@ This project uses an **orchestrator + subagent** pattern. The orchestrator reads
 **Role:** Build the internal content management interface for the team (Amy, Kaci, Nick + others).
 
 **Tasks:**
-1. **`app/admin/page.tsx`** — Pending review queue:
-   - Table: name, category, actor, dev start, deployment, source, scraped date
-   - Bulk approve / bulk reject
-   - Individual approve / edit / reject buttons
-   - Filter by category
+1. **`app/admin/page.tsx`** — Pending review queue (`components/admin/AdminQueue.tsx`):
+   - Table: name, program, event type, category, actor, event date, source, scraped date
+   - Bulk approve / bulk reject; individual approve / edit / reject
+   - **Merge selected events into a program** (`components/admin/MergeControl.tsx`):
+     pick an existing program or create a new one → builds a lifecycle
 2. **`app/admin/[id]/edit/page.tsx`** — Full edit form:
-   - All milestone fields editable including all date fields
+   - All fields editable incl. all dates, **event type + event date**, and program
    - `additionalSources[]` as dynamic add/remove list
-   - Save → sets `entryStatus=APPROVED`
-   - Reject → sets `entryStatus=REJECTED` with optional note
+   - Save → `entryStatus=APPROVED`; Reject → `REJECTED` with optional note
 3. **`lib/auth.ts`** — NextAuth credentials auth:
-   - Email + password for MVP
+   - **Single shared credential** (env `ADMIN_EMAIL` + `ADMIN_PASSWORD_HASH`), not per-user
    - Middleware protecting all `/admin/*` routes
-4. **`app/api/milestones/route.ts`** — REST API:
-   - `GET /api/milestones` → approved milestones (public, with pagination)
-   - `GET /api/milestones?status=PENDING` → admin only
-   - `POST /api/milestones` → create / ingest
-   - `PATCH /api/milestones/[id]` → update (admin only)
-5. **`app/api/ingest/route.ts`** — Scraper ingest endpoint:
-   - Accepts POST from scrapers
-   - Runs deduplication before inserting
-   - Sets `entryStatus=PENDING` always
+4. **REST API:**
+   - `GET /api/milestones` → approved events (public) / `?status=PENDING` (admin), includes `program`
+   - `POST /api/milestones` (admin) · `PATCH /api/milestones/[id]` (admin; incl. program/eventType/eventDate)
+   - `POST /api/milestones/merge` (admin) → assign events to a program, recompute status
+   - `GET /api/programs` (list) · `GET /api/programs/[id]` (program + its events)
+5. **`app/api/ingest/route.ts`** — Scraper ingest:
+   - Token-gated (`INGEST_TOKEN`); upserts the `Program` by slug and links the event
+   - Event dedup hash (`sha256(slug|eventType|eventDate|sourceUrl)`); always `PENDING`
 
 **Constraints:**
-- Admin routes 401 if unauthenticated
-- No public registration — seed admin accounts manually for the team
+- Admin routes 401 if unauthenticated; ingest 401 without the token
+- Single shared admin login — no public registration (per-user is a future upgrade)
 - Show scraper source provenance clearly so reviewers can judge quality
 
 ---
@@ -394,64 +456,63 @@ This project uses an **orchestrator + subagent** pattern. The orchestrator reads
 **Role:** Project scaffold, environment config, and deployment.
 
 **Tasks:**
-1. Generate `.env.example`:
-   ```
-   DATABASE_URL=
-   NEXTAUTH_SECRET=
-   NEXTAUTH_URL=
-   ADMIN_EMAIL=
-   ADMIN_PASSWORD_HASH=
-   ```
-2. Write `docker-compose.yml` for local Postgres development
-3. Write `.github/workflows/scrape.yml` — daily scraping cron (6am UTC):
-   - Runs `sam_gov.py`, `news_rss.py`, `af_mil.py`
-   - POSTs results to `/api/ingest`
-4. Write deployment notes: Vercel (frontend) + Railway (Postgres)
-5. Write `README.md` covering:
-   - Local setup and dev environment
-   - How to run scrapers manually
-   - How to add admin users
-   - Data sources list (SAM.gov, af.mil, defense news RSS)
+1. `.env.example` (local) + `.env.production.example` (deploy): `DATABASE_URL`,
+   `NEXTAUTH_SECRET`/`NEXTAUTH_URL`, `ADMIN_EMAIL`/`ADMIN_PASSWORD_HASH`,
+   `INGEST_TOKEN`, and optional scraper keys (`SAM_GOV_API_KEY`,
+   `CONGRESS_API_KEY`, `DVIDS_API_KEY`).
+2. `docker-compose.yml` (local Postgres) + `docker-compose.prod.yml` (app +
+   Postgres; entrypoint runs `prisma migrate deploy`).
+3. `.github/workflows/scrape.yml` — daily cron (06:00 UTC) runs
+   `scrapers/backfill.py` → token-gated `/api/ingest`. Secrets: `INGEST_URL`,
+   `INGEST_TOKEN`, + optional API keys. Runs from the **default branch**.
+4. Deployment: **Docker self-host** — see `DEPLOY.md` (runbook) and
+   `DEPLOY_WITH_CLAUDE.md` (paste-able Claude deploy prompt).
+5. `README.md`: local setup, running scrapers, the shared admin login, and the
+   `.mil`/`.gov` data-source list.
+
+**Gotcha:** in the docker-compose `env_file`, escape every `$` in
+`ADMIN_PASSWORD_HASH` as `$$` — Compose interpolates env_file values, so an
+unescaped bcrypt hash is mangled and login silently fails.
 
 ---
 
 ## Execution Phases
 
-The orchestrator executes in order, waiting for human approval between phases:
+All phases below are complete; the checklist is retained as build history.
 
 ```
-Phase 1 — Foundation
-  [ ] Subagent 5: Project scaffold, .env, docker-compose, README
-  [ ] Subagent 1: Prisma schema + initial migration
+Phase 1 — Foundation                                                    ✅ Done
+  [x] Project scaffold, .env, docker-compose, README
+  [x] Prisma schema + initial migration
 
-Phase 2 — Seed Data
-  [ ] Subagent 1: Seed all US entries from team research
-       - 3 US systems (Maven, GenAI.mil, MantaRay)
-       - Full procurement contracts index
-       - Policy directives timeline
-  [ ] Subagent 1: Verification query (row counts by category)
+Phase 2 — Seed Data                                                     ✅ Done
+  [x] Seed US systems (as program lifecycles), contracts, policy directives
+  [x] Verification query (row counts by category)
 
-Phase 3 — Scrapers
-  [ ] Subagent 2: SAM.gov scraper
-  [ ] Subagent 2: Defense news RSS scraper
-  [ ] Subagent 2: af.mil scraper
-  [ ] Subagent 2: utils.py (dedup, rate limiting, ingest POST)
+Phase 3 — Scrapers (.mil/.gov only)                                     ✅ Done
+  [x] SAM.gov (chunked ≤1yr) + USAspending + DVIDS + Congress + SBIR
+  [x] Per-agency RSS (af/army/navy/spaceforce/darpa/defense/gao) + rss.py
+  [x] utils.py (dedup, dates, program_slug, UA, ingest POST) + backfill.py
 
-Phase 4 — Frontend
-  [ ] Subagent 3: Homepage + adoption velocity chart
-  [ ] Subagent 3: Timeline component with year grouping + color coding
-  [ ] Subagent 3: Filter bar (all categories from pitch deck)
-  [ ] Subagent 3: System profile pages
+Phase 4 — Frontend                                                      ✅ Done
+  [x] Homepage (featured program tracks) + adoption velocity chart
+  [x] Timeline: year grouping, color coding, program lifecycle tracks
+  [x] Filter bar (all categories) + date range
+  [x] Program profile + event profile pages
 
-Phase 5 — Admin
-  [ ] Subagent 4: Admin dashboard + pending queue
-  [ ] Subagent 4: Edit form + auth middleware
-  [ ] Subagent 4: API routes (milestones + ingest)
+Phase 5 — Admin                                                         ✅ Done
+  [x] Review queue + bulk actions + merge-by-program
+  [x] Edit form (incl. event type/date/program) + auth middleware
+  [x] API routes (milestones, programs, merge, ingest)
 
-Phase 6 — Integration & Deploy
-  [ ] Subagent 5: GitHub Actions scrape schedule
-  [ ] Subagent 5: Vercel + Railway deployment config
-  [ ] All agents: End-to-end smoke test plan
+Phase 6 — Integration & Deploy                                          ✅ Done
+  [x] GitHub Actions scrape schedule (backfill.py → token-gated ingest)
+  [x] Docker self-host config (docker-compose.prod.yml, DEPLOY.md)
+  [x] End-to-end smoke tests (validated against a live prod stack)
+
+Post-MVP                                                                ✅ Done
+  [x] Program-lifecycle model (Program + EventType + merge tooling)
+  [x] Historical backfill to 2016 (SAM.gov, USAspending, DVIDS)
 ```
 
 ---
@@ -479,20 +540,23 @@ Phase 6 — Integration & Deploy
 
 ---
 
-## Key Decisions Still Open (Human Must Decide)
+## Key Decisions
 
-1. **Project name / branding** — needed before deploy
-2. **Hosting confirmation** — Vercel + Railway recommended
-3. **Admin accounts** — who gets access at launch (Amy, Kaci, Nick + others?)
-4. **Significance scoring** — manual admin judgment vs. automated heuristic (contract value, etc.)
-5. **Classification scope** — confirm site is unclassified only; no classified sources in the pipeline
+1. **Project name / branding** — ⏳ still open, needed before public launch
+2. **Hosting** — ✅ resolved: Docker self-host (`DEPLOY.md`)
+3. **Admin accounts** — ✅ resolved: one shared credential for the team (per-user auth is a future upgrade)
+4. **Significance scoring** — heuristic for scraped awards (scaled by contract value); manual for curated/reviewed entries
+5. **Classification scope** — unclassified only; `.mil`/`.gov` + public-domain DoD sources — no classified sources in the pipeline
+6. **Deployment public URL** — ⏳ pending: needs a host + domain (the daily scrape requires a deployed, reachable `/api/ingest`)
 
 ---
 
 ## References
 
 - Design: https://www.scsp.ai/space-race/
-- SAM.gov API: https://api.sam.gov/
-- Next.js App Router: https://nextjs.org/docs
-- Prisma: https://www.prisma.io/docs
-- NextAuth.js: https://next-auth.js.org
+- SAM.gov API: https://open.gsa.gov/api/get-opportunities-public-api/
+- USAspending API: https://api.usaspending.gov/
+- DVIDS API: https://api.dvidshub.net/
+- Congress.gov API: https://api.congress.gov/
+- Next.js App Router: https://nextjs.org/docs · Prisma: https://www.prisma.io/docs · NextAuth.js: https://next-auth.js.org
+- Runbooks: [DEPLOY.md](./DEPLOY.md) · [DEPLOY_WITH_CLAUDE.md](./DEPLOY_WITH_CLAUDE.md) · [scrapers/README.md](./scrapers/README.md)
