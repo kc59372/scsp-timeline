@@ -28,6 +28,7 @@ export function formatMilestoneDate(iso: string | null): string | null {
 /** First known date, latest-stage first — used as the timeline anchor. */
 export function primaryDateIso(m: Milestone): string | null {
   return (
+    m.eventDate ??
     m.deploymentDate ??
     m.fieldingDate ??
     m.testDate ??

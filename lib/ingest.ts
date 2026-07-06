@@ -12,11 +12,12 @@
  *  - Unknown/absent fields become null; no fabrication.
  */
 import { createHash } from "crypto";
-import { Prisma, Category, Country, SystemStatus } from "@prisma/client";
+import { Prisma, Category, Country, SystemStatus, EventType } from "@prisma/client";
 
 const CATEGORY_VALUES = new Set(Object.values(Category));
 const COUNTRY_VALUES = new Set(Object.values(Country));
 const SYSTEM_STATUS_VALUES = new Set(Object.values(SystemStatus));
+const EVENT_TYPE_VALUES = new Set(Object.values(EventType));
 
 /** Date fields accepted on the wire and mapped 1:1 onto the schema. */
 const DATE_FIELDS = [
@@ -25,14 +26,68 @@ const DATE_FIELDS = [
   "testDate",
   "fieldingDate",
   "deploymentDate",
+  "eventDate",
 ] as const;
 
+/**
+ * Lifecycle maturity ranking. A Program's systemStatus is derived from its
+ * furthest-along event; higher rank wins. Kept here (pure) so both the ingest
+ * route and admin merge tooling agree on the mapping.
+ */
+const EVENT_STATUS: Record<EventType, { status: SystemStatus; rank: number }> = {
+  RD_START: { status: "DEVELOPMENT", rank: 1 },
+  SOLICITATION: { status: "DEVELOPMENT", rank: 2 },
+  AWARD: { status: "DEVELOPMENT", rank: 3 },
+  TEST: { status: "TESTING", rank: 4 },
+  FIELDING: { status: "FIELDED", rank: 5 },
+  DEPLOYMENT: { status: "FIELDED", rank: 6 },
+  POLICY: { status: "UNKNOWN", rank: 0 },
+  OTHER: { status: "UNKNOWN", rank: 0 },
+};
+
+/** Implied system status + maturity rank for an event type (0 = no signal). */
+export function eventStatus(type: EventType): { status: SystemStatus; rank: number } {
+  return EVENT_STATUS[type] ?? { status: "UNKNOWN", rank: 0 };
+}
+
+/** Maturity rank of a SystemStatus, for deciding whether an event advances it. */
+const STATUS_RANK: Record<SystemStatus, number> = {
+  UNKNOWN: 0,
+  DEVELOPMENT: 1,
+  TESTING: 4,
+  FIELDED: 5,
+  CANCELLED: 99, // terminal — never auto-advanced past
+};
+
+export function statusRank(status: SystemStatus): number {
+  return STATUS_RANK[status] ?? 0;
+}
+
 export type RawMilestone = Record<string, unknown>;
+
+/** A Program to upsert (by slug) before attaching the event. */
+export interface ProgramDescriptor {
+  slug: string;
+  create: Prisma.ProgramCreateInput;
+}
 
 export interface NormalizeResult {
   data?: Prisma.MilestoneCreateInput;
   dedupeHash?: string;
+  /** Present when the item carries a programSlug — caller upserts, then links. */
+  program?: ProgramDescriptor;
+  /** Event type of this item, if any — caller uses it to advance program status. */
+  eventType?: EventType;
   error?: string;
+}
+
+/** Normalize an arbitrary label to a stable slug (mirror of scrapers' program_slug). */
+export function programSlug(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function str(v: unknown): string | undefined {
@@ -58,6 +113,21 @@ function parseDate(v: unknown, field: string): Date | null {
 
 export function computeDedupeHash(name: string, devStartDate: Date | null): string {
   const key = `${normalizeName(name)}|${devStartDate ? devStartDate.toISOString() : ""}`;
+  return createHash("sha256").update(key).digest("hex");
+}
+
+/**
+ * Dedup key for a lifecycle event: sha256(programSlug|eventType|eventDate|sourceUrl).
+ * Distinct events of the same program (solicitation, award, test…) hash apart,
+ * while re-ingesting the same event is an idempotent upsert.
+ */
+export function computeEventDedupeHash(
+  slug: string,
+  eventType: EventType,
+  eventDate: Date | null,
+  sourceUrl: string,
+): string {
+  const key = `${slug}|${eventType}|${eventDate ? eventDate.toISOString() : ""}|${sourceUrl}`;
   return createHash("sha256").update(key).digest("hex");
 }
 
@@ -104,6 +174,15 @@ export function normalizeMilestone(raw: RawMilestone): NormalizeResult {
     const dates: Record<string, Date | null> = {};
     for (const f of DATE_FIELDS) dates[f] = parseDate(raw[f], f);
 
+    let eventType: EventType | null = null;
+    const etRaw = str(raw.eventType);
+    if (etRaw) {
+      if (!EVENT_TYPE_VALUES.has(etRaw as EventType)) {
+        return { error: `invalid eventType: ${etRaw}` };
+      }
+      eventType = etRaw as EventType;
+    }
+
     const additionalSources = Array.isArray(raw.additionalSources)
       ? raw.additionalSources.filter((x): x is string => typeof x === "string")
       : [];
@@ -137,6 +216,8 @@ export function normalizeMilestone(raw: RawMilestone): NormalizeResult {
       testLocation: str(raw.testLocation) ?? null,
       fieldingDate: dates.fieldingDate,
       deploymentDate: dates.deploymentDate,
+      eventType,
+      eventDate: dates.eventDate,
       entryStatus: "PENDING", // forced — never auto-approve scraped data
       systemStatus,
       sourceUrl,
@@ -149,8 +230,40 @@ export function normalizeMilestone(raw: RawMilestone): NormalizeResult {
       significance,
     };
 
-    const dedupeHash = computeDedupeHash(name, dates.devStartDate);
-    return { data: { ...data, dedupeHash }, dedupeHash };
+    // Build the program-link descriptor when the item carries a program.
+    // programSlug is preferred; fall back to slugifying programName.
+    let program: ProgramDescriptor | undefined;
+    const slugRaw = str(raw.programSlug);
+    const programName = str(raw.programName) ?? name;
+    const slug = slugRaw ?? (str(raw.programName) ? programSlug(programName) : undefined);
+    if (slug) {
+      program = {
+        slug,
+        create: {
+          slug,
+          name: programName,
+          actor,
+          country: countryRaw as Country,
+          category,
+          subcategory: str(raw.subcategory) ?? null,
+          significance,
+        },
+      };
+    }
+
+    // Dedup: event-based when we have a program + event type (distinct
+    // lifecycle stages hash apart); otherwise the legacy name-based key.
+    const dedupeHash =
+      program && eventType
+        ? computeEventDedupeHash(program.slug, eventType, dates.eventDate, sourceUrl)
+        : computeDedupeHash(name, dates.devStartDate);
+
+    return {
+      data: { ...data, dedupeHash },
+      dedupeHash,
+      program,
+      eventType: eventType ?? undefined,
+    };
   } catch (e) {
     return { error: e instanceof Error ? e.message : String(e) };
   }

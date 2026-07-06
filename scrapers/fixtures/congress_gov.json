@@ -1,0 +1,40 @@
+{
+  "bills": [
+    {
+      "congress": 118,
+      "type": "HR",
+      "number": "4265",
+      "title": "Artificial Intelligence for National Security Act",
+      "url": "https://api.congress.gov/v3/bill/118/hr/4265",
+      "updateDate": "2024-05-20",
+      "latestAction": {
+        "actionDate": "2024-05-20",
+        "text": "Referred to the Committee on Armed Services."
+      }
+    },
+    {
+      "congress": 118,
+      "type": "S",
+      "number": "2003",
+      "title": "Autonomous Weapons Systems Oversight Act",
+      "url": "https://api.congress.gov/v3/bill/118/s/2003",
+      "updateDate": "2023-11-08",
+      "latestAction": {
+        "actionDate": "2023-11-08",
+        "text": "Read twice and referred to the Committee on Armed Services."
+      }
+    },
+    {
+      "congress": 118,
+      "type": "HR",
+      "number": "9901",
+      "title": "National Park Trail Maintenance Act",
+      "url": "https://api.congress.gov/v3/bill/118/hr/9901",
+      "updateDate": "2024-02-01",
+      "latestAction": {
+        "actionDate": "2024-02-01",
+        "text": "Referred to the Committee on Natural Resources."
+      }
+    }
+  ]
+}

@@ -12,6 +12,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// A Program groups the lifecycle events of a single system/initiative
+/// (e.g. Project Maven, MantaRay). Scrapers assign a stable `slug` derived from
+/// the program name / contract-number family so events from different sources
+/// (a SAM.gov solicitation, a DARPA test, an af.mil fielding story) can be
+/// auto-linked when the slug matches; the admin dashboard merges the rest.
+model Program {
+  id           String        @id @default(cuid())
+  slug         String        @unique // stable entity-resolution key
+  name         String
+  description  String        @default("")
+  actor        String
+  country      Country       @default(US)
+  category     Category
+  subcategory  String?
+  systemStatus SystemStatus? // derived from the furthest-along event
+  significance Int           @default(1) // 1–5
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  events    Milestone[]
+}
+
 model Milestone {
   id          String  @id @default(cuid())
   name        String // System/initiative name
@@ -20,6 +42,13 @@ model Milestone {
   country     Country @default(US) // Stubbed for future expansion
   category    Category
   subcategory String? // e.g. "Counter-UAS", "C2", "Unmanned Maritime"
+
+  // Lifecycle grouping — a Milestone is a single dated *event* in a Program's
+  // lifecycle. programId null = standalone event (e.g. curated seed rows).
+  programId String?
+  program   Program?   @relation(fields: [programId], references: [id], onDelete: SetNull)
+  eventType EventType? // which lifecycle stage this event represents
+  eventDate DateTime? // the date this event occurred (stage-agnostic)
 
   // Key dates (all nullable — some are unknown per the research data)
   devStartDate    DateTime?
@@ -94,6 +123,19 @@ enum SystemStatus {
   FIELDED
   CANCELLED
   UNKNOWN
+}
+
+/// A single stage in a Program's lifecycle. Ordered roughly by maturity so the
+/// server can derive a Program's systemStatus from its furthest-along event.
+enum EventType {
+  RD_START // R&D / dev start (DARPA program, SBIR award)
+  SOLICITATION // RFI / solicitation posted
+  AWARD // contract awarded
+  TEST // test / evaluation event
+  FIELDING // initial fielding
+  DEPLOYMENT // full operational deployment
+  POLICY // policy / directive / oversight
+  OTHER // uncategorized lifecycle event
 }
 
 model Tag {

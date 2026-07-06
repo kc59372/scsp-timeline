@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Milestone } from "@/lib/milestones";
 import { CATEGORY_STYLES } from "@/lib/categories";
+import { EVENT_TYPES, eventTypeLabel } from "@/lib/events";
 
 const SYSTEM_STATUSES = ["", "DEVELOPMENT", "TESTING", "FIELDED", "CANCELLED", "UNKNOWN"];
 const DATE_FIELDS: { key: keyof Milestone; label: string }[] = [
@@ -29,6 +30,8 @@ export function EditForm({ milestone }: { milestone: Milestone }) {
     category: milestone.category,
     subcategory: milestone.subcategory ?? "",
     systemStatus: milestone.systemStatus ?? "",
+    eventType: milestone.eventType ?? "",
+    eventDate: toDateInput(milestone.eventDate),
     devStartDate: toDateInput(milestone.devStartDate),
     procurementDate: toDateInput(milestone.procurementDate),
     testDate: toDateInput(milestone.testDate),
@@ -117,6 +120,33 @@ export function EditForm({ milestone }: { milestone: Milestone }) {
           <select className={input} value={form.systemStatus} onChange={(e) => set("systemStatus", e.target.value)}>
             {SYSTEM_STATUSES.map((s) => <option key={s} value={s}>{s || "—"}</option>)}
           </select>
+        </label>
+      </div>
+
+      {/* Lifecycle grouping — merge into a program from the review queue. */}
+      <div className="grid gap-5 sm:grid-cols-3">
+        <div className="flex flex-col gap-1">
+          <span className={labelCls}>Program</span>
+          <div className="rounded-md border border-edge bg-panel/60 px-3 py-2 text-sm text-gray-300">
+            {milestone.program ? (
+              milestone.program.name
+            ) : (
+              <span className="text-gray-500">Ungrouped — use “Merge” in the queue</span>
+            )}
+          </div>
+        </div>
+        <label className="flex flex-col gap-1">
+          <span className={labelCls}>Event Type</span>
+          <select className={input} value={form.eventType} onChange={(e) => set("eventType", e.target.value)}>
+            <option value="">—</option>
+            {EVENT_TYPES.map((t) => (
+              <option key={t} value={t}>{eventTypeLabel(t)}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={labelCls}>Event Date</span>
+          <input type="date" className={input} value={form.eventDate} onChange={(e) => set("eventDate", e.target.value)} />
         </label>
       </div>
 

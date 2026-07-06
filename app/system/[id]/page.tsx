@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fetchMilestone, type Milestone } from "@/lib/milestones";
 import { categoryStyle, categoryLabel } from "@/lib/categories";
+import { eventTypeLabel } from "@/lib/events";
 import { formatMilestoneDate, formatUsd } from "@/lib/format";
 
 /** One row in the dates/details grid; renders nothing if value is empty. */
@@ -31,6 +32,22 @@ export default async function SystemProfile({ params }: { params: { id: string }
         ← Back to timeline
       </Link>
 
+      {/* Part-of-program banner — links to the full lifecycle track. */}
+      {m.program && (
+        <Link
+          href={`/program/${m.program.id}`}
+          className="mt-6 flex items-center justify-between gap-3 rounded-md border border-indigo-500/30 bg-indigo-500/10 px-4 py-3 hover:border-indigo-500/60"
+        >
+          <span className="text-sm text-gray-300">
+            <span className="font-mono text-[0.65rem] uppercase tracking-wide text-indigo-300">
+              {eventTypeLabel(m.eventType)} stage
+            </span>{" "}
+            of <span className="font-semibold text-gray-100">{m.program.name}</span>
+          </span>
+          <span className="shrink-0 font-mono text-xs text-indigo-300">View lifecycle →</span>
+        </Link>
+      )}
+
       <div className="mt-6">
         <span className={`rounded px-2.5 py-1 font-mono text-[0.7rem] font-semibold uppercase tracking-wide ${style.pill}`}>
           {categoryLabel(m.category)}
@@ -59,6 +76,8 @@ export default async function SystemProfile({ params }: { params: { id: string }
       <section className="mt-10">
         <h2 className="mb-2 text-lg font-semibold">Adoption Profile</h2>
         <dl className="grid gap-x-8 sm:grid-cols-2">
+          {m.eventType && <Field label="Lifecycle Stage" value={eventTypeLabel(m.eventType)} />}
+          <Field label="Event Date" value={formatMilestoneDate(m.eventDate)} />
           <Field label="Development Start" value={formatMilestoneDate(m.devStartDate)} />
           <Field label="Procurement" value={formatMilestoneDate(m.procurementDate)} />
           <Field label="Test" value={formatMilestoneDate(m.testDate)} />

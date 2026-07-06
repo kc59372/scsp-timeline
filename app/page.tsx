@@ -1,13 +1,27 @@
 import Link from "next/link";
 import { fetchMilestones } from "@/lib/milestones";
+import { buildTimelineEntries } from "@/lib/timeline";
 import { AdoptionVelocityChart } from "@/components/AdoptionVelocityChart";
 import { MilestoneCard } from "@/components/MilestoneCard";
+import { ProgramCard } from "@/components/ProgramCard";
+
+/** Significance of a timeline entry — program-level or milestone-level. */
+function entrySignificance(e: ReturnType<typeof buildTimelineEntries>[number]): number {
+  return e.kind === "program" ? e.program.significance : e.milestone.significance;
+}
 
 export default async function Home() {
   const { items, total } = await fetchMilestones();
-  const featured = items
-    .filter((m) => m.significance >= 4)
-    .sort((a, b) => b.significance - a.significance)
+  // Feature high-impact entries — programs surface as one lifecycle track
+  // rather than four separate stage cards.
+  const featured = buildTimelineEntries(items)
+    .filter((e) => entrySignificance(e) >= 4)
+    .sort((a, b) => {
+      const diff = entrySignificance(b) - entrySignificance(a);
+      if (diff !== 0) return diff;
+      // Tie-break: prefer program lifecycle tracks over standalone entries.
+      return (b.kind === "program" ? 1 : 0) - (a.kind === "program" ? 1 : 0);
+    })
     .slice(0, 4);
 
   return (
@@ -50,9 +64,13 @@ export default async function Home() {
             High-impact entries across the adoption timeline.
           </p>
           <div className="flex flex-col gap-6">
-            {featured.map((m) => (
-              <MilestoneCard key={m.id} milestone={m} />
-            ))}
+            {featured.map((e) =>
+              e.kind === "program" ? (
+                <ProgramCard key={e.id} program={e.program} events={e.events} />
+              ) : (
+                <MilestoneCard key={e.id} milestone={e.milestone} />
+              ),
+            )}
           </div>
         </section>
       )}

@@ -10,6 +10,24 @@ export interface Tag {
   name: string;
 }
 
+/** JSON-serialized Program (lifecycle grouping) over the wire. */
+export interface Program {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  actor: string;
+  country: string;
+  category: string;
+  subcategory: string | null;
+  systemStatus: string | null;
+  significance: number;
+  createdAt: string;
+  updatedAt: string;
+  /** Present on the /api/programs list response. */
+  _count?: { events: number };
+}
+
 /** JSON-serialized Milestone (dates are ISO strings over the wire). */
 export interface Milestone {
   id: string;
@@ -19,6 +37,10 @@ export interface Milestone {
   country: string;
   category: string;
   subcategory: string | null;
+  programId: string | null;
+  program?: Program | null;
+  eventType: string | null;
+  eventDate: string | null;
   devStartDate: string | null;
   procurementDate: string | null;
   testDate: string | null;
@@ -91,6 +113,37 @@ export async function fetchMilestonesAdmin(
   });
   if (!res.ok) throw new Error(`fetchMilestonesAdmin failed: ${res.status}`);
   return res.json();
+}
+
+/** A program plus its lifecycle events (from /api/programs/[id]). */
+export interface ProgramWithEvents extends Program {
+  events: Milestone[];
+}
+
+/** Fetch one program with its (approved, for public) lifecycle events. */
+export async function fetchProgram(id: string, cookie?: string): Promise<ProgramWithEvents | null> {
+  const res = await fetch(`${baseUrl()}/api/programs/${id}`, {
+    cache: "no-store",
+    headers: cookie ? { cookie } : undefined,
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`fetchProgram failed: ${res.status}`);
+  return res.json();
+}
+
+/** List programs (merge targets). Optionally filter by name via `q`. */
+export async function fetchPrograms(
+  cookie?: string,
+  q?: string,
+): Promise<Program[]> {
+  const qs = q ? `?q=${encodeURIComponent(q)}` : "";
+  const res = await fetch(`${baseUrl()}/api/programs${qs}`, {
+    cache: "no-store",
+    headers: cookie ? { cookie } : undefined,
+  });
+  if (!res.ok) throw new Error(`fetchPrograms failed: ${res.status}`);
+  const data = await res.json();
+  return data.items as Program[];
 }
 
 export async function fetchMilestoneAdmin(id: string, cookie: string): Promise<Milestone | null> {

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>navy.mil News (sample)</title>
+    <link>https://www.navy.mil/press-office/</link>
+    <description>Sample navy.mil feed for offline scraper testing.</description>
+    <item>
+      <title>Navy deploys autonomous unmanned surface vessel on operational patrol</title>
+      <link>https://www.navy.mil/news/0000201/sample-usv-deployment/</link>
+      <description>An AI-piloted unmanned surface vessel was deployed for its first operational patrol in the fleet.</description>
+      <pubDate>Fri, 10 Jan 2025 12:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Machine learning predictive maintenance tested aboard destroyer</title>
+      <link>https://www.navy.mil/news/0000202/sample-ml-maintenance/</link>
+      <description>The Navy tested a machine learning predictive-maintenance algorithm to forecast component failures.</description>
+      <pubDate>Mon, 12 Aug 2024 15:45:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Sailors compete in annual fitness challenge</title>
+      <link>https://www.navy.mil/news/0000203/sample-fitness/</link>
+      <description>Crews across the fleet competed in a shipboard fitness challenge this weekend.</description>
+      <pubDate>Sun, 05 May 2024 10:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

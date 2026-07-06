@@ -25,87 +25,238 @@ const y = (year: number) => new Date(Date.UTC(year, 0, 1));
 const ym = (year: number, month: number) => new Date(Date.UTC(year, month - 1, 1));
 
 // ---------------------------------------------------------------------------
-// US Systems (3) — from CLAUDE.md + legacy/data.json
+// US Systems as PROGRAMS (3) — the seeded systems are the curated,
+// human-verified counterpart to scraped lifecycles: each is a Program whose
+// events trace request → award → test → deployment. Dates come only from the
+// team's research (CLAUDE.md + legacy/data.json). The Maven "ATR contract"
+// event is the same $1.4B ONR/NGA/CDAO award listed in the CLAUDE.md
+// procurement table, folded in here as Maven's AWARD stage.
 // ---------------------------------------------------------------------------
-const systems: Prisma.MilestoneCreateInput[] = [
+const programs: Prisma.ProgramCreateInput[] = [
   {
+    slug: "maven-smart-system",
     name: "Maven Smart System",
     actor: "Palantir / DoD",
     country: "US",
     category: "TARGETING",
     subcategory: "Sensor-to-shooter / ATR",
+    systemStatus: "FIELDED",
+    significance: 5,
     description:
       "Project Maven's Smart System, powered by Palantir, integrates AI/ML " +
-      "targeting capabilities across the military services. It links machine " +
+      "targeting capabilities across the military services, linking machine " +
       "learning algorithms with command-and-control sensors to accelerate " +
-      "targeting workflows and enhance battlespace situational awareness. " +
-      "Underwent significant joint-force operational testing in Dec 2025, and " +
-      "a major live exercise in May 2026 demonstrated rapid sensor-to-shooter " +
-      "targeting, threat detection, and AI-assisted weapon-allocation " +
-      "recommendations in a contested environment.",
-    devStartDate: ym(2017, 4),
-    testDate: ym(2025, 12),
-    deploymentDate: ym(2026, 5),
-    systemStatus: "FIELDED",
-    entryStatus: "APPROVED",
-    sourceUrl:
-      "https://investors.palantir.com/news-details/2024/Palantir-Expands-Maven-Smart-System-AIML-Capabilities-to-Military-Services/",
-    sourceName: "Palantir Expands Maven Smart System AI/ML Capabilities",
-    additionalSources: [
-      "https://www.cbsnews.com/news/ai-warfare-cbs-news-sees-us-military-exercise-robots-artificial-intelligence/",
-    ],
-    significance: 5,
+      "targeting workflows and enhance battlespace situational awareness.",
+    events: {
+      create: [
+        {
+          name: "Project Maven established (Algorithmic Warfare Cross-Functional Team)",
+          actor: "DoD",
+          country: "US",
+          category: "TARGETING",
+          eventType: "RD_START",
+          eventDate: ym(2017, 4),
+          devStartDate: ym(2017, 4),
+          systemStatus: "DEVELOPMENT",
+          entryStatus: "APPROVED",
+          description:
+            "The Department of Defense established Project Maven to apply " +
+            "machine learning to full-motion video and accelerate " +
+            "targeting workflows.",
+          sourceUrl:
+            "https://investors.palantir.com/news-details/2024/Palantir-Expands-Maven-Smart-System-AIML-Capabilities-to-Military-Services/",
+          sourceName: "Palantir Expands Maven Smart System AI/ML Capabilities",
+          additionalSources: [],
+          significance: 4,
+        },
+        {
+          name: "Project Maven ATR contract (Palantir)",
+          actor: "ONR/NGA/CDAO",
+          country: "US",
+          category: "PROCUREMENT_CONTRACT",
+          eventType: "AWARD",
+          // FY24 award (contract number N00014-24-C-XXXX encodes fiscal 2024;
+          // primary Palantir source is a 2024 announcement).
+          eventDate: y(2024),
+          procurementDate: y(2024),
+          systemStatus: "DEVELOPMENT",
+          entryStatus: "APPROVED",
+          description:
+            "Project Maven automatic target recognition (ATR) contract " +
+            "expanding Palantir's Maven Smart System across the services.",
+          contractNumber: "N00014-24-C-XXXX",
+          contractValue: 1_400_000_000,
+          issuingAgency: "ONR/NGA/CDAO",
+          awardedTo: "Palantir",
+          sourceUrl:
+            "https://investors.palantir.com/news-details/2024/Palantir-Expands-Maven-Smart-System-AIML-Capabilities-to-Military-Services/",
+          sourceName: "Palantir Expands Maven Smart System AI/ML Capabilities",
+          additionalSources: [],
+          significance: 5,
+        },
+        {
+          name: "Maven Smart System joint-force operational testing",
+          actor: "Palantir / DoD",
+          country: "US",
+          category: "TARGETING",
+          eventType: "TEST",
+          eventDate: ym(2025, 12),
+          testDate: ym(2025, 12),
+          systemStatus: "TESTING",
+          entryStatus: "APPROVED",
+          description:
+            "The Maven Smart System underwent significant joint-force " +
+            "operational testing in December 2025.",
+          sourceUrl:
+            "https://investors.palantir.com/news-details/2024/Palantir-Expands-Maven-Smart-System-AIML-Capabilities-to-Military-Services/",
+          sourceName: "Palantir Expands Maven Smart System AI/ML Capabilities",
+          additionalSources: [],
+          significance: 4,
+        },
+        {
+          name: "Maven Smart System live sensor-to-shooter exercise",
+          actor: "Palantir / DoD",
+          country: "US",
+          category: "TARGETING",
+          eventType: "DEPLOYMENT",
+          eventDate: ym(2026, 5),
+          deploymentDate: ym(2026, 5),
+          systemStatus: "FIELDED",
+          entryStatus: "APPROVED",
+          description:
+            "A major May 2026 live exercise demonstrated rapid " +
+            "sensor-to-shooter targeting, threat detection, and AI-assisted " +
+            "weapon-allocation recommendations in a contested environment.",
+          sourceUrl:
+            "https://investors.palantir.com/news-details/2024/Palantir-Expands-Maven-Smart-System-AIML-Capabilities-to-Military-Services/",
+          sourceName: "Palantir Expands Maven Smart System AI/ML Capabilities",
+          additionalSources: [
+            "https://www.cbsnews.com/news/ai-warfare-cbs-news-sees-us-military-exercise-robots-artificial-intelligence/",
+          ],
+          significance: 5,
+        },
+      ],
+    },
   },
   {
+    slug: "genai-mil-arctic-bridge",
     name: "GenAI.mil (Exercise Arctic Bridge)",
     actor: "USAF 732nd Air Mobility Squadron",
     country: "US",
     category: "TRAINING_SIMULATION",
     subcategory: "Generative AI / wargaming",
-    description:
-      "The 732nd Air Mobility Squadron used the custom GenAI.mil platform " +
-      "(powered by Gemini) to run a specialized tabletop exercise in Alaska. " +
-      "The system rapidly drafted complex scenario injects, logistical " +
-      "challenges, and weather hazards tailored to sub-zero Arctic conditions, " +
-      "reducing scenario planning times from weeks to minutes.",
-    devStartDate: ym(2025, 12),
-    deploymentDate: ym(2026, 6),
-    testLocation: "Alaska",
     systemStatus: "FIELDED",
-    entryStatus: "APPROVED",
-    sourceUrl:
-      "https://www.af.mil/News/Article-Display/Article/4507566/732nd-ams-leverages-artificial-intelligence-to-enhance-arctic-ttx/",
-    sourceName: "732nd AMS leverages AI to enhance Arctic TTX (af.mil)",
-    additionalSources: [],
     significance: 3,
+    description:
+      "A custom generative-AI platform (GenAI.mil, powered by Gemini) used by " +
+      "the 732nd Air Mobility Squadron to draft complex tabletop-exercise " +
+      "scenarios, reducing scenario planning times from weeks to minutes.",
+    events: {
+      create: [
+        {
+          name: "GenAI.mil platform development",
+          actor: "USAF 732nd Air Mobility Squadron",
+          country: "US",
+          category: "TRAINING_SIMULATION",
+          eventType: "RD_START",
+          eventDate: ym(2025, 12),
+          devStartDate: ym(2025, 12),
+          systemStatus: "DEVELOPMENT",
+          entryStatus: "APPROVED",
+          description: "Development of the custom GenAI.mil generative-AI platform.",
+          sourceUrl:
+            "https://www.af.mil/News/Article-Display/Article/4507566/732nd-ams-leverages-artificial-intelligence-to-enhance-arctic-ttx/",
+          sourceName: "732nd AMS leverages AI to enhance Arctic TTX (af.mil)",
+          additionalSources: [],
+          significance: 2,
+        },
+        {
+          name: "GenAI.mil used in Exercise Arctic Bridge tabletop (Alaska)",
+          actor: "USAF 732nd Air Mobility Squadron",
+          country: "US",
+          category: "TRAINING_SIMULATION",
+          eventType: "DEPLOYMENT",
+          eventDate: ym(2026, 6),
+          deploymentDate: ym(2026, 6),
+          testLocation: "Alaska",
+          systemStatus: "FIELDED",
+          entryStatus: "APPROVED",
+          description:
+            "GenAI.mil rapidly drafted scenario injects, logistical " +
+            "challenges, and weather hazards tailored to sub-zero Arctic " +
+            "conditions for a specialized tabletop exercise in Alaska.",
+          sourceUrl:
+            "https://www.af.mil/News/Article-Display/Article/4507566/732nd-ams-leverages-artificial-intelligence-to-enhance-arctic-ttx/",
+          sourceName: "732nd AMS leverages AI to enhance Arctic TTX (af.mil)",
+          additionalSources: [],
+          significance: 3,
+        },
+      ],
+    },
   },
   {
+    slug: "manta-ray-xl-uuv",
     name: "Northrop Grumman Manta Ray XL-UUV",
     actor: "Northrop Grumman / DARPA",
     country: "US",
     category: "UNMANNED_SYSTEMS",
     subcategory: "Unmanned Maritime (XL-UUV)",
+    systemStatus: "TESTING",
+    significance: 4,
     description:
       "DARPA's Manta Ray prototype is an autonomous, energy-efficient " +
-      "extra-large unmanned underwater vehicle, field-assemblable from five " +
-      "shipping-container-sized pieces. It completed in-water testing of " +
-      "propulsion, steering, and ballast operations off the coast of Southern " +
-      "California, demonstrating long-range, high-endurance autonomous " +
-      "underwater missions without on-site human support or hosting " +
-      "infrastructure.",
-    devStartDate: y(2020),
-    testDate: ym(2024, 2),
-    testLocation: "Southern California coast",
-    systemStatus: "TESTING",
-    entryStatus: "APPROVED",
-    sourceUrl:
-      "https://www.northropgrumman.com/what-we-do/mission-solutions/sensors/manta-ray",
-    sourceName: "Northrop Grumman: Manta Ray Mission Solutions",
-    additionalSources: [
-      "https://www.darpa.mil/news/2024/manta-ray-uuv-prototype",
-      "https://www.northropgrumman.com/what-we-do/mission-solutions/sensors/manta-ray/beneath-the-surface",
-    ],
-    significance: 4,
+      "extra-large unmanned underwater vehicle (XL-UUV), field-assemblable " +
+      "from shipping-container-sized pieces for long-range, high-endurance " +
+      "autonomous underwater missions.",
+    events: {
+      create: [
+        {
+          name: "DARPA Manta Ray program begins",
+          actor: "Northrop Grumman / DARPA",
+          country: "US",
+          category: "UNMANNED_SYSTEMS",
+          eventType: "RD_START",
+          eventDate: y(2020),
+          devStartDate: y(2020),
+          systemStatus: "DEVELOPMENT",
+          entryStatus: "APPROVED",
+          description:
+            "DARPA's Manta Ray program began developing an autonomous " +
+            "extra-large unmanned underwater vehicle.",
+          sourceUrl: "https://www.darpa.mil/news/2024/manta-ray-uuv-prototype",
+          sourceName: "DARPA: Manta Ray UUV prototype",
+          additionalSources: [
+            "https://www.northropgrumman.com/what-we-do/mission-solutions/sensors/manta-ray",
+          ],
+          significance: 3,
+        },
+        {
+          name: "Manta Ray in-water testing off Southern California",
+          actor: "Northrop Grumman / DARPA",
+          country: "US",
+          category: "UNMANNED_SYSTEMS",
+          eventType: "TEST",
+          eventDate: ym(2024, 2),
+          testDate: ym(2024, 2),
+          testLocation: "Southern California coast",
+          systemStatus: "TESTING",
+          entryStatus: "APPROVED",
+          description:
+            "The Manta Ray prototype completed in-water testing of " +
+            "propulsion, steering, and ballast operations off the coast of " +
+            "Southern California, demonstrating autonomous underwater " +
+            "operations without on-site human support or hosting infrastructure.",
+          sourceUrl:
+            "https://www.northropgrumman.com/what-we-do/mission-solutions/sensors/manta-ray",
+          sourceName: "Northrop Grumman: Manta Ray Mission Solutions",
+          additionalSources: [
+            "https://www.darpa.mil/news/2024/manta-ray-uuv-prototype",
+            "https://www.northropgrumman.com/what-we-do/mission-solutions/sensors/manta-ray/beneath-the-surface",
+          ],
+          significance: 4,
+        },
+      ],
+    },
   },
 ];
 
@@ -146,20 +297,9 @@ const contracts: Prisma.MilestoneCreateInput[] = [
     additionalSources: [],
     significance: 5,
   },
-  {
-    name: "Project Maven ATR (Palantir)",
-    actor: "ONR/NGA/CDAO",
-    country: "US",
-    category: "PROCUREMENT_CONTRACT",
-    description: "Project Maven automatic target recognition (ATR) contract.",
-    contractNumber: "N00014-24-C-XXXX",
-    contractValue: 1_400_000_000,
-    issuingAgency: "ONR/NGA/CDAO",
-    awardedTo: "Palantir",
-    entryStatus: "APPROVED",
-    additionalSources: [],
-    significance: 5,
-  },
+  // NOTE: the "Project Maven ATR (Palantir)" $1.4B contract from the CLAUDE.md
+  // table is seeded as the AWARD event of the Maven Smart System program above,
+  // not as a standalone contract.
   {
     name: "Human-UAS Swarming (Mile Two LLC)",
     actor: "AFRL",
@@ -303,14 +443,22 @@ const policies: Prisma.MilestoneCreateInput[] = [
 ];
 
 async function main() {
-  const all = [...systems, ...contracts, ...policies];
+  const standalone = [...contracts, ...policies];
 
-  console.log(`Seeding ${all.length} milestones...`);
+  console.log(`Seeding ${programs.length} programs + ${standalone.length} standalone milestones...`);
 
-  // Idempotent reset of milestone data so re-running the seed is safe.
+  // Idempotent reset so re-running the seed is safe. Delete events first
+  // (FK → Program), then programs, then any remaining standalone milestones.
   await prisma.milestone.deleteMany();
+  await prisma.program.deleteMany();
 
-  for (const data of all) {
+  // Programs create their lifecycle events via nested writes.
+  for (const data of programs) {
+    await prisma.program.create({ data });
+  }
+
+  // Standalone contracts + policy directives (no lifecycle grouping).
+  for (const data of standalone) {
     await prisma.milestone.create({ data });
   }
 
@@ -320,12 +468,15 @@ async function main() {
     _count: { _all: true },
   });
 
-  console.log("\nMilestone counts by category:");
+  console.log("\nMilestone (event) counts by category:");
   for (const row of counts.sort((a, b) => a.category.localeCompare(b.category))) {
     console.log(`  ${row.category.padEnd(22)} ${row._count._all}`);
   }
   const total = await prisma.milestone.count();
+  const programCount = await prisma.program.count();
+  const grouped = await prisma.milestone.count({ where: { programId: { not: null } } });
   console.log(`  ${"TOTAL".padEnd(22)} ${total}`);
+  console.log(`\nPrograms: ${programCount} · grouped events: ${grouped} · standalone: ${total - grouped}`);
 
   console.log(
     "\n⚠ TODO (incomplete data — see CLAUDE.md):\n" +

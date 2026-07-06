@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>DARPA News (sample)</title>
+    <link>https://www.darpa.mil/news</link>
+    <description>Sample darpa.mil news feed for offline scraper testing.</description>
+    <item>
+      <title>DARPA launches new autonomous systems research program</title>
+      <link>https://www.darpa.mil/news/0000401/sample-autonomy-program/</link>
+      <description>DARPA announced a new research program to advance machine learning for autonomous platforms.</description>
+      <pubDate>Tue, 11 Feb 2025 14:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>DARPA demonstrates AI dogfighting agent in live flight test</title>
+      <link>https://www.darpa.mil/news/0000402/sample-ace-flight-test/</link>
+      <description>An artificial intelligence agent flew autonomous within-visual-range maneuvers during a live flight test.</description>
+      <pubDate>Thu, 19 Sep 2024 10:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>DARPA hosts community open house event</title>
+      <link>https://www.darpa.mil/news/0000403/sample-open-house/</link>
+      <description>The agency welcomed students and families for a day of science exhibits.</description>
+      <pubDate>Sat, 27 Apr 2024 12:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

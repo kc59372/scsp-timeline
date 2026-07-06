@@ -8,14 +8,15 @@
  *         and for approve/reject (just send entryStatus [+ reviewNote]).
  */
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma, Category, SystemStatus, EntryStatus } from "@prisma/client";
+import { Prisma, Category, SystemStatus, EntryStatus, EventType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 
 const CATEGORY_VALUES = new Set(Object.values(Category));
 const SYSTEM_STATUS_VALUES = new Set(Object.values(SystemStatus));
 const ENTRY_STATUS_VALUES = new Set(Object.values(EntryStatus));
-const DATE_FIELDS = ["devStartDate", "procurementDate", "testDate", "fieldingDate", "deploymentDate"] as const;
+const EVENT_TYPE_VALUES = new Set(Object.values(EventType));
+const DATE_FIELDS = ["devStartDate", "procurementDate", "testDate", "fieldingDate", "deploymentDate", "eventDate"] as const;
 // Required (non-null) string columns — only updated when given a string.
 const REQUIRED_STRING_FIELDS = ["name", "description", "actor"] as const;
 // Nullable string columns — may be set to null/"".
@@ -30,7 +31,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     ? { id: params.id }
     : { id: params.id, entryStatus: "APPROVED" };
 
-  const milestone = await prisma.milestone.findFirst({ where, include: { tags: true } });
+  const milestone = await prisma.milestone.findFirst({ where, include: { tags: true, program: true } });
   if (!milestone) return NextResponse.json({ error: "not found" }, { status: 404 });
   return NextResponse.json(milestone);
 }
@@ -102,6 +103,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
     data.entryStatus = body.entryStatus as EntryStatus;
   }
+  if ("eventType" in body) {
+    const v = body.eventType;
+    if (v === null || v === "") data.eventType = null;
+    else if (EVENT_TYPE_VALUES.has(v as EventType)) data.eventType = v as EventType;
+    else return NextResponse.json({ error: `invalid eventType: ${v}` }, { status: 400 });
+  }
+  if ("programId" in body) {
+    const v = body.programId;
+    if (v === null || v === "") data.program = { disconnect: true };
+    else if (typeof v === "string") data.program = { connect: { id: v } };
+    else return NextResponse.json({ error: "programId must be a string or null" }, { status: 400 });
+  }
   if ("additionalSources" in body) {
     if (!Array.isArray(body.additionalSources) || body.additionalSources.some((x) => typeof x !== "string")) {
       return NextResponse.json({ error: "additionalSources must be a string[]" }, { status: 400 });
@@ -129,7 +142,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const updated = await prisma.milestone.update({
       where: { id: params.id },
       data,
-      include: { tags: true },
+      include: { tags: true, program: true },
     });
     return NextResponse.json(updated);
   } catch {

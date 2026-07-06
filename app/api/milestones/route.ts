@@ -55,8 +55,8 @@ export async function GET(req: NextRequest) {
   const [items, total] = await Promise.all([
     prisma.milestone.findMany({
       where,
-      include: { tags: true },
-      orderBy: [{ devStartDate: "asc" }, { createdAt: "asc" }],
+      include: { tags: true, program: true },
+      orderBy: [{ eventDate: "asc" }, { devStartDate: "asc" }, { createdAt: "asc" }],
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),

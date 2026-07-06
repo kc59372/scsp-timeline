@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Space Force News (sample)</title>
+    <link>https://www.spaceforce.mil/News/</link>
+    <description>Sample spaceforce.mil feed for offline scraper testing.</description>
+    <item>
+      <title>Space Force fields AI-enabled space domain awareness tool</title>
+      <link>https://www.spaceforce.mil/News/Article/0000601/sample-sda-ai/</link>
+      <description>Guardians began using a machine learning tool to track objects and assess threats in orbit.</description>
+      <pubDate>Tue, 20 May 2025 14:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Guardians test autonomous satellite maneuvering algorithms</title>
+      <link>https://www.spaceforce.mil/News/Article/0000602/sample-autonomous-sat/</link>
+      <description>The Space Force evaluated autonomous collision-avoidance algorithms during an on-orbit demonstration.</description>
+      <pubDate>Wed, 09 Oct 2024 11:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Space Force holds change of command ceremony</title>
+      <link>https://www.spaceforce.mil/News/Article/0000603/sample-ceremony/</link>
+      <description>A delta welcomed its new commander during a traditional ceremony.</description>
+      <pubDate>Fri, 07 Mar 2025 16:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

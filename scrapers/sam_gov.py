@@ -39,25 +39,54 @@ def _money(value: Any) -> float | None:
         return None
 
 
+def _program_key(op: dict[str, Any]) -> str:
+    """Stable program key for a SAM.gov notice.
+
+    A solicitation and its later award share a solicitation number, so keying on
+    it auto-links those lifecycle stages under one Program. Fall back to the
+    notice title, then the notice ID.
+    """
+    return (
+        op.get("solicitationNumber")
+        or op.get("title")
+        or op.get("noticeId")
+        or "sam-gov-notice"
+    )
+
+
 def map_opportunity(op: dict[str, Any]) -> dict[str, Any]:
-    """Map one SAM.gov opportunity record → normalized milestone dict."""
-    award = op.get("award") or {}
-    awardee = (award.get("awardee") or {}).get("name") if isinstance(award, dict) else None
+    """Map one SAM.gov opportunity record → normalized lifecycle event.
+
+    Award notices (have an award amount/awardee) become AWARD events; everything
+    else (solicitations, sources-sought, RFIs) becomes a SOLICITATION event.
+    Both link to the same Program via the solicitation number.
+    """
+    award = op.get("award") if isinstance(op.get("award"), dict) else None
+    awardee = (award.get("awardee") or {}).get("name") if award else None
+    amount = _money(award.get("amount")) if award else None
+    is_award = bool(award and (amount or awardee))
+
+    title = op.get("title") or op.get("noticeId") or "Untitled SAM.gov notice"
+    posted = utils.normalize_date(op.get("postedDate"))
 
     return utils.to_milestone(
-        name=op.get("title") or op.get("noticeId") or "Untitled SAM.gov notice",
+        name=title,
         category="PROCUREMENT_CONTRACT",
         actor=op.get("fullParentPathName") or "US Government",
         description=op.get("description") or op.get("type") or "",
         source_url=op.get("uiLink") or f"https://sam.gov/opp/{op.get('noticeId', '')}/view",
         source_name="SAM.gov",
-        procurement_date=utils.normalize_date(op.get("postedDate")),
-        dev_start_date=utils.normalize_date(op.get("postedDate")),
+        program_name=title,
+        program_slug_value=utils.program_slug(_program_key(op)),
+        event_type="AWARD" if is_award else "SOLICITATION",
+        event_date=posted,
+        # Keep the stage-specific date populated too, for the profile view.
+        procurement_date=posted,
         contract_number=op.get("solicitationNumber") or op.get("noticeId"),
-        contract_value=_money(award.get("amount") if isinstance(award, dict) else None),
+        contract_value=amount,
         issuing_agency=op.get("fullParentPathName") or op.get("organizationType"),
         awarded_to=awardee,
-        significance=3,
+        significance=4 if is_award else 3,
     )
 
 
@@ -76,7 +105,7 @@ def fetch_live(api_key: str, posted_from: str, posted_to: str, limit: int) -> li
                 "offset": offset,
             }
             url = f"{API_URL}?{urlparse.urlencode(params)}"
-            req = urlrequest.Request(url, headers={"Accept": "application/json"})
+            req = urlrequest.Request(url, headers={"Accept": "application/json", "User-Agent": utils.USER_AGENT})
             with urlrequest.urlopen(req, timeout=30) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
 
