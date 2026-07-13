@@ -8,8 +8,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Pooled connection (Neon -pooler host) — used by the app at runtime on Vercel.
+  url       = env("DATABASE_URL")
+  // Direct connection (Neon non-pooler host) — used only by `prisma migrate`/seed,
+  // never at runtime. Set it wherever migrations are run.
+  directUrl = env("DIRECT_URL")
 }
 
 /// A Program groups the lifecycle events of a single system/initiative
