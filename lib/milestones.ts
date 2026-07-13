@@ -73,6 +73,14 @@ export interface MilestonesResponse {
 }
 
 function baseUrl(): string {
+  // These are self-referential fetches (a server component calling this app's
+  // own API route). On Vercel, VERCEL_URL is the current deployment's own host,
+  // so it always points at the right deployment — more robust than a hand-set
+  // domain (which can be a stale placeholder or point at a different deploy).
+  // Requires the deployment to be publicly reachable (disable Vercel Deployment
+  // Protection); the app's own NextAuth still guards /admin.
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  // Local dev / non-Vercel hosts: explicit override, else localhost.
   return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 }
 
