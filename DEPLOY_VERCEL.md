@@ -25,20 +25,21 @@ For the Docker self-host route instead, see [DEPLOY.md](./DEPLOY.md).
    - **Direct** (toggle *Connection pooling* OFF) → this is `DIRECT_URL`.
    Both are secrets. Keep them handy for step 2 and step 3.
 
-## 2. Load the schema + seed data (one time)
+## 2. Schema + seed (no laptop DB access needed)
 
-Run against Neon from your laptop (in the repo root). The pooled URL can't run
-migrations, so use the **direct** URL for both here:
+Corporate networks with a TLS proxy (Zscaler/Netskope) block the raw Postgres
+port, so `prisma migrate`/`db seed` can't reach Neon from a work laptop. This
+setup works around that entirely:
 
-```bash
-export DATABASE_URL="<neon DIRECT url>"
-export DIRECT_URL="<neon DIRECT url>"
-npx prisma migrate deploy        # creates all tables
-npx prisma db seed               # loads curated seed data (destructive; first time only)
-```
+- **Schema:** the Vercel build runs `prisma migrate deploy` automatically (its
+  `build` script is `prisma generate && prisma migrate deploy && next build`), so
+  tables are created on every deploy from Vercel's network. Nothing to run by hand.
+- **Seed data (one time):** after the first successful deploy, load the curated
+  seed over HTTPS via the token-gated route (step 5) — no direct DB connection.
 
-`npx prisma studio` (optional) confirms rows exist. **Never re-run seed** after
-you've approved scraped data — it clears the tables.
+If you *are* on an unproxied network, the classic path still works from the repo
+root: `DATABASE_URL=<neon DIRECT url> DIRECT_URL=<neon DIRECT url> npx prisma db seed`.
+**Never re-run seed** after approving scraped data — it clears the tables.
 
 ## 3. Deploy the app (Vercel)
 
@@ -80,7 +81,21 @@ Scheduled workflows run from the **default branch**, so the workflow file must b
 on `main`. Trigger "Scheduled Scrape" manually from the **Actions** tab to test —
 new rows appear as PENDING in `/admin`.
 
-## 5. Smoke test
+## 5. Seed the curated data (one time, over HTTPS)
+
+After the first deploy the tables exist but are empty. Load the seed via the
+token-gated route (works through a TLS proxy — it's just HTTPS):
+
+```bash
+curl -X POST https://<your-vercel-url>/api/admin/seed \
+  -H "Authorization: Bearer <INGEST_TOKEN>"
+# → {"seeded":true,"programs":3,"milestones":...}
+```
+
+It refuses to run if the DB already has rows (409) so it can't wipe approved
+data; pass `?force=true` only to intentionally re-seed a fresh DB.
+
+## 6. Smoke test
 
 - [ ] Public `/` and `/timeline` render the seed entries.
 - [ ] `/admin` redirects to login; the shared credential reaches the review queue.

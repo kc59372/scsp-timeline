@@ -442,7 +442,7 @@ const policies: Prisma.MilestoneCreateInput[] = [
   },
 ];
 
-async function main() {
+export async function runSeed() {
   const standalone = [...contracts, ...policies];
 
   console.log(`Seeding ${programs.length} programs + ${standalone.length} standalone milestones...`);
@@ -487,13 +487,25 @@ async function main() {
       "    seeded with sourceUrl = null. Add verified sources before they go\n" +
       "    live (CLAUDE.md: no unsourced entries go public)."
   );
+
+  return {
+    programs: programCount,
+    milestones: total,
+    grouped,
+    standalone: total - grouped,
+  };
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// Auto-run only when executed directly as a script (e.g. `prisma db seed` /
+// ts-node prisma/seed.ts) — NOT when imported (the one-time /api/admin/seed
+// route imports runSeed and invokes it under a token guard instead).
+if (require.main === module) {
+  runSeed()
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
