@@ -72,14 +72,21 @@ notes, and the historical-data rationale live in
 
 ## Deployment
 
-Self-host with Docker (app + Postgres); schedule the scrapers via GitHub Actions
-(or system cron). `/api/ingest` is protected by a shared `INGEST_TOKEN` in
-production. A **shared review queue = one deployment + one database** — deploy
-once; teammates access the same URL with the shared admin login.
+**Live on Vercel + Neon Postgres: https://scsp-timeline.vercel.app.** Scrapers
+run on a schedule via GitHub Actions (or locally); `/api/ingest` is protected by
+a shared `INGEST_TOKEN`. A **shared review queue = one deployment + one
+database** — teammates access the same URL with the shared admin login.
 
-- **[DEPLOY.md](./DEPLOY.md)** — the full Docker runbook.
+News triage: the deployment has no `ANTHROPIC_API_KEY`, so the automated scrape
+triages news with a deterministic keyword fallback. For higher-quality triage we
+periodically **rerun the scraper locally with Claude Code as the triage engine**
+(dry-run scrape → Claude classifies news via the `lib/verify.ts` 3-bucket rubric
+→ ingest to Neon).
+
+- **[DEPLOY_VERCEL.md](./DEPLOY_VERCEL.md)** — the Vercel + Neon runbook (current).
+- **[DEPLOY.md](./DEPLOY.md)** — the Docker self-host runbook (fallback).
 - **[DEPLOY_WITH_CLAUDE.md](./DEPLOY_WITH_CLAUDE.md)** — a paste-able prompt to
-  have Claude Code perform the deploy on the host machine.
+  have Claude Code perform the Docker deploy on a host machine.
 
 ## Local Setup
 

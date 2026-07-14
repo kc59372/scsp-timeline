@@ -7,7 +7,7 @@ US military AI programs, back to 2016. Everything lands PENDING for admin review
 and program-merge.
 
 Sources (all official .mil/.gov — no commercial news):
-  sam_gov      SAM.gov contracts (solicitations + awards)   → 2016→present (needs key)
+  sam_gov      SAM.gov contracts (solicitations + awards)   → recent window, quota-capped (needs key)
   usaspending_gov  USAspending.gov DoD AI contract awards   → 2016→present (no key)
   dvids_gov    DVIDS DoD news / press releases              → 2016→present (needs key)
   darpa_mil    DARPA programs / news                         → RD_START, TEST
@@ -33,9 +33,13 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 
-# (script, extra args). sam_gov gets the historical start date.
+# (script, extra args). sam_gov scans only a recent window and caps its
+# api.sam.gov calls so routine/periodic reruns stay under the free key's low
+# daily quota. The one-time 2016→present historical pull is already done; to
+# repeat it, run sam_gov.py directly with `--posted-from 01/01/2016
+# --max-requests 0` across several UTC days (the quota resets at 00:00 UTC).
 ROSTER: list[tuple[str, list[str]]] = [
-    ("sam_gov.py", ["--posted-from", "01/01/2016"]),
+    ("sam_gov.py", ["--recent-days", "30", "--max-requests", "8"]),
     ("usaspending_gov.py", ["--since", "01/01/2016"]),
     ("dvids_gov.py", ["--since", "2016-01-01", "--limit", "500"]),
     ("darpa_mil.py", []),

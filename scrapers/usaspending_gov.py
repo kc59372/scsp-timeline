@@ -26,7 +26,7 @@ from urllib import request as urlrequest
 import programs  # curated program registry (matcher + focused query terms)
 import utils
 from programs import match_program  # curated cross-source program registry
-from rss import is_relevant  # shared whole-word AI/autonomy relevance gate
+from rss import is_relevant_procurement  # stricter AI/autonomy gate for contracts
 
 API_URL = "https://api.usaspending.gov/api/v2/search/spending_by_award/"
 KEYWORDS = ["artificial intelligence", "machine learning", "autonomous", "unmanned"]
@@ -149,7 +149,7 @@ def main() -> int:
     mapped = [
         m
         for m in (map_award(a) for a in awards)
-        if _in_scope(m, floor_year) and is_relevant(f"{m['name']} {m.get('description', '')}")
+        if _in_scope(m, floor_year) and is_relevant_procurement(f"{m['name']} {m.get('description', '')}")
     ]
     items = utils.local_dedupe(mapped)
     print(f"[usaspending] {len(items)} event(s) prepared (>= {floor_year}, AI-relevant).", file=sys.stderr)

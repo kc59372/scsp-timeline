@@ -75,7 +75,10 @@ Read these from the environment (`set -a; source .env; set +a`).
 | `--dry-run` | Print normalized JSON to stdout; **do not** POST |
 | `--limit N` | Cap items fetched/emitted (default 50; backfill default 200) |
 
-`sam_gov.py` also takes `--posted-from MM/DD/YYYY` / `--posted-to`.
+`sam_gov.py` also takes `--posted-from MM/DD/YYYY` / `--posted-to`,
+`--recent-days N` (search only the last N days — overrides `--posted-from`), and
+`--max-requests N` (hard cap on `api.sam.gov` calls this run; default **8** to
+stay under the free key's low daily quota; `0` = uncapped).
 `backfill.py` also takes `--only sam_gov,darpa_mil` to run a subset.
 
 ## Usage
@@ -123,8 +126,26 @@ cannot reach 2016. Historical depth comes from the two **award APIs**:
 
 For historical **news / press releases** (pre-2026), `dvids_gov.py` uses the
 DVIDS API (official DoD public-domain media) — searchable back to 2016, unlike
-the recent-only RSS feeds. `sam_gov.py` chunks its 2016→present range into
-≤1-year windows (the SAM API rejects longer ranges with HTTP 400).
+the recent-only RSS feeds. `sam_gov.py` chunks its date range into ≤1-year
+windows (the SAM API rejects longer ranges with HTTP 400).
+
+### SAM.gov daily quota (important)
+
+SAM.gov's free (non-federal) key has a **hard, low daily request quota** (429,
+code 900804, resets 00:00 UTC). The heaviest consumer is the per-notice
+description fetch — **one extra `api.sam.gov` call for every opportunity** — so a
+naive 2016→present pull trips the quota fast (it did on 2026-07-13). Two guards:
+
+- **`--max-requests N`** (default **8**) — a hard per-run budget counting *every*
+  `api.sam.gov` call (search pages + each description fetch). When exhausted the
+  run stops gracefully with a partial result, same as an actual 429.
+- **`--recent-days N`** — scan only new notices, so periodic reruns stay cheap.
+
+`backfill.py` therefore runs SAM as `--recent-days 30 --max-requests 8` (routine,
+quota-safe). The one-time 2016→present historical pull is already done; to repeat
+it, run `sam_gov.py --posted-from 01/01/2016 --max-requests 0` across several UTC
+days (quota resets daily). **USAspending.gov** (no key, no quota) is the primary
+historical source for DoD contract awards; SAM is supplementary.
 
 Direct HTML scraping of the sites' search/archive pages was investigated and is
 **not viable** without a headless browser: defense.gov / af.mil / gao.gov return

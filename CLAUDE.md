@@ -46,7 +46,7 @@ Three primary research documents inform this project, produced by Amy, Kaci, and
 | Backend/API | Next.js API routes (serverless) |
 | Scraping | Python 3 (`urllib` + `feedparser`); official `.mil`/`.gov` + public-domain DoD APIs/RSS only |
 | Auth (admin) | NextAuth.js — single shared credential (env-based) |
-| Hosting | **Docker Compose self-host** (app + Postgres) — see `DEPLOY.md`. (Vercel + managed Postgres also works; Docker is what's implemented.) |
+| Hosting | **Vercel + Neon Postgres** — live at https://scsp-timeline.vercel.app (see `DEPLOY_VERCEL.md`). Docker Compose self-host also works (`DEPLOY.md`) but is no longer the deployment. |
 | Data ingestion | GitHub Actions cron (daily) → token-protected `/api/ingest` |
 
 ---
@@ -334,7 +334,7 @@ and public-domain DoD sources. Each scraper emits normalized events (with an
 
 | Source | Reach | Key |
 |---|---|---|
-| SAM.gov (solicitations + awards) | 2016→present (chunked ≤1yr/call) | free |
+| SAM.gov (solicitations + awards) | recent window, quota-capped (`--recent-days`/`--max-requests`; chunked ≤1yr/call) | free (low daily quota) |
 | USAspending.gov (DoD contract awards) | 2016→present | none |
 | DVIDS (DoD news / press releases) | 2016→present (historical) | free public |
 | Congress.gov (AI legislation) | recent (title search) | free |
@@ -601,11 +601,12 @@ Post-MVP                                                                ✅ Done
 ## Key Decisions
 
 1. **Project name / branding** — ⏳ still open, needed before public launch
-2. **Hosting** — ✅ resolved: Docker self-host (`DEPLOY.md`)
+2. **Hosting** — ✅ resolved: Vercel + Neon Postgres (`DEPLOY_VERCEL.md`); Docker self-host remains as a fallback (`DEPLOY.md`)
 3. **Admin accounts** — ✅ resolved: one shared credential for the team (per-user auth is a future upgrade)
-4. **Significance scoring** — heuristic for scraped awards (scaled by contract value); manual for curated/reviewed entries
+4. **Significance scoring** — ✅ resolved: **by known-program match, not money** — 4 if a scraped entry maps to a curated program (`scrapers/programs.json`), else 2; manual for curated/reviewed entries
 5. **Classification scope** — unclassified only; `.mil`/`.gov` + public-domain DoD sources — no classified sources in the pipeline
-6. **Deployment public URL** — ⏳ pending: needs a host + domain (the daily scrape requires a deployed, reachable `/api/ingest`)
+6. **Deployment public URL** — ✅ resolved: https://scsp-timeline.vercel.app (daily scrape POSTs to its token-gated `/api/ingest`)
+7. **News triage without an API key** — the prod deployment has no `ANTHROPIC_API_KEY`, so the daily automated scrape triages news with the deterministic keyword fallback. For higher-quality triage we **periodically rerun the scraper locally with Claude Code as the triage engine** (dry-run scrape → Claude classifies news via the `lib/verify.ts` 3-bucket rubric → ingest to Neon). Optionally set `ANTHROPIC_API_KEY` on Vercel to upgrade the automated path to the LLM.
 
 ---
 
