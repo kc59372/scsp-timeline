@@ -60,7 +60,8 @@ def map_result(r: dict[str, Any]) -> dict[str, Any] | None:
         program_slug_value=program["slug"] if program else None,
         event_type=rss.infer_event_type(haystack, "OTHER"),
         event_date=utils.normalize_date(r.get("date_published") or r.get("date")),
-        significance=2,
+        # Significance by known-project relevance, not money or recency.
+        significance=utils.program_significance(program),
     )
 
 

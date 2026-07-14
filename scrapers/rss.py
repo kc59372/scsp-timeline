@@ -150,7 +150,9 @@ def map_entry(entry: Any, source_name: str, default_event_type: str) -> dict[str
         program_slug_value=program["slug"] if program else None,
         event_type=infer_event_type(haystack, default_event_type),
         event_date=event_date,
-        significance=2,
+        # Significance by known-project relevance (4 if it names a tracked
+        # program, else 2), not by any money or recency signal.
+        significance=utils.program_significance(program),
     )
 
 

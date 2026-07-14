@@ -146,7 +146,8 @@ def map_opportunity(op: dict[str, Any], description: str) -> dict[str, Any]:
         contract_value=amount,
         issuing_agency=op.get("fullParentPathName") or op.get("organizationType"),
         awarded_to=awardee,
-        significance=4 if is_award else 3,
+        # Significance by known-project relevance, not award size or stage.
+        significance=utils.program_significance(program),
     )
 
 

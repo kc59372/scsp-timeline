@@ -13,14 +13,6 @@ export default async function ProgramProfile({ params }: { params: { id: string 
   const style = categoryStyle(program.category);
   const events = orderEvents(program.events);
 
-  // Aggregate unique sources across all lifecycle events.
-  const sourceMap = new Map<string, string>();
-  for (const e of events) {
-    if (e.sourceUrl) sourceMap.set(e.sourceUrl, e.sourceName ?? e.sourceUrl);
-    for (const url of e.additionalSources) if (!sourceMap.has(url)) sourceMap.set(url, url);
-  }
-  const sources = Array.from(sourceMap, ([url, label]) => ({ url, label }));
-
   const totalValue = events.reduce((sum, e) => sum + (e.contractValue ?? 0), 0);
 
   return (
@@ -98,32 +90,6 @@ export default async function ProgramProfile({ params }: { params: { id: string 
           ))}
         </ol>
       </section>
-
-      {/* sources */}
-      {sources.length > 0 && (
-        <section className="mt-10 rounded-md border border-edge bg-black/30 p-4">
-          <div className="mb-3 font-mono text-[0.7rem] font-bold uppercase tracking-wide text-gray-500">
-            Verified Public Sources
-          </div>
-          <ul className="flex flex-col gap-2">
-            {sources.map((s) => (
-              <li key={s.url}>
-                <a
-                  href={s.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 hover:underline"
-                >
-                  <span className="break-all">{s.label}</span>
-                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none" className="shrink-0">
-                    <path d="M3.5 1.5H10.5M10.5 1.5V8.5M10.5 1.5L1.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </main>
   );
 }

@@ -44,18 +44,6 @@ def _iso(mmddyyyy: str) -> str:
     return datetime.strptime(mmddyyyy, "%m/%d/%Y").strftime("%Y-%m-%d")
 
 
-def _significance(amount: float | None) -> int:
-    if amount is None:
-        return 3
-    if amount >= 1_000_000_000:
-        return 5
-    if amount >= 100_000_000:
-        return 4
-    if amount >= 10_000_000:
-        return 3
-    return 2
-
-
 def map_award(aw: dict[str, Any]) -> dict[str, Any]:
     desc = (aw.get("Description") or "").strip()
     award_id = aw.get("Award ID")
@@ -83,7 +71,8 @@ def map_award(aw: dict[str, Any]) -> dict[str, Any]:
         contract_value=float(amount) if isinstance(amount, (int, float)) else None,
         issuing_agency=aw.get("Awarding Sub Agency") or aw.get("Awarding Agency"),
         awarded_to=recipient,
-        significance=_significance(amount if isinstance(amount, (int, float)) else None),
+        # Significance by known-project relevance, not dollar amount.
+        significance=utils.program_significance(program),
     )
 
 
