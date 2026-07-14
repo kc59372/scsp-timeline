@@ -109,6 +109,18 @@ def normalize_date(value: str | None) -> str | None:
         return None
 
 
+def program_significance(program: Any) -> int:
+    """Significance by known-project relevance, NOT contract dollar value.
+
+    An entry that maps to a curated program (a named, tracked project) is
+    significant (4); one that names no known program is not (2). This is the
+    single source of truth for how scrapers score significance — money is
+    deliberately not a factor (a $9B award naming no known program is not
+    automatically "significant").
+    """
+    return 4 if program else 2
+
+
 def to_milestone(
     *,
     name: str,

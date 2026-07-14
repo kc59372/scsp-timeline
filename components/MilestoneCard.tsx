@@ -14,13 +14,6 @@ export function MilestoneCard({ milestone }: { milestone: Milestone }) {
   const dateLabel = formatMilestoneDate(primaryDateIso(milestone));
   const value = formatUsd(milestone.contractValue);
 
-  const sources = [
-    ...(milestone.sourceUrl
-      ? [{ url: milestone.sourceUrl, label: milestone.sourceName ?? milestone.sourceUrl }]
-      : []),
-    ...milestone.additionalSources.map((url) => ({ url, label: url })),
-  ];
-
   return (
     <article
       onClick={() => setExpanded((v) => !v)}
@@ -94,32 +87,7 @@ export function MilestoneCard({ milestone }: { milestone: Milestone }) {
       <div className={`grid transition-all duration-300 ${expanded ? "mt-4 grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
         <div className="overflow-hidden">
           <div className="border-t border-dashed border-edge pt-4">
-            <p className="mb-4 text-sm leading-relaxed text-gray-200">{milestone.description}</p>
-            {sources.length > 0 && (
-              <div className="rounded-md border border-edge bg-black/30 p-3">
-                <div className="mb-2 font-mono text-[0.7rem] font-bold uppercase tracking-wide text-gray-500">
-                  Verified Public Sources
-                </div>
-                <ul className="flex flex-col gap-1.5">
-                  {sources.map((s) => (
-                    <li key={s.url}>
-                      <a
-                        href={s.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 hover:underline"
-                      >
-                        <span className="break-all">{s.label}</span>
-                        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" className="shrink-0">
-                          <path d="M3.5 1.5H10.5M10.5 1.5V8.5M10.5 1.5L1.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <p className="text-sm leading-relaxed text-gray-200">{milestone.description}</p>
           </div>
         </div>
       </div>

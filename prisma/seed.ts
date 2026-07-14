@@ -130,9 +130,7 @@ const programs: Prisma.ProgramCreateInput[] = [
           sourceUrl:
             "https://investors.palantir.com/news-details/2024/Palantir-Expands-Maven-Smart-System-AIML-Capabilities-to-Military-Services/",
           sourceName: "Palantir Expands Maven Smart System AI/ML Capabilities",
-          additionalSources: [
-            "https://www.cbsnews.com/news/ai-warfare-cbs-news-sees-us-military-exercise-robots-artificial-intelligence/",
-          ],
+          additionalSources: [],
           significance: 5,
         },
       ],
@@ -279,7 +277,9 @@ const contracts: Prisma.MilestoneCreateInput[] = [
     awardedTo: "Palantir / Booz Allen",
     entryStatus: "APPROVED",
     additionalSources: [],
-    significance: 3,
+    // Significance by known-project relevance, not contract value: this contract
+    // names no tracked program (scrapers/programs.json), so it is not "significant".
+    significance: 2,
   },
   {
     name: "JWCC Multi-Cloud (Joint Warfighting Cloud Capability)",
@@ -295,7 +295,9 @@ const contracts: Prisma.MilestoneCreateInput[] = [
     awardedTo: "AWS, Google, Microsoft, Oracle",
     entryStatus: "APPROVED",
     additionalSources: [],
-    significance: 5,
+    // $9B, but names no tracked program → not auto-"significant" (significance
+    // reflects known-project relevance, not dollar value).
+    significance: 2,
   },
   // NOTE: the "Project Maven ATR (Palantir)" $1.4B contract from the CLAUDE.md
   // table is seeded as the AWARD event of the Maven Smart System program above,
@@ -328,7 +330,8 @@ const contracts: Prisma.MilestoneCreateInput[] = [
     awardedTo: "Scale AI, Anduril, C3 AI",
     entryStatus: "APPROVED",
     additionalSources: [],
-    significance: 4,
+    // Names no tracked program → significance by relevance, not award size.
+    significance: 2,
   },
 ];
 

@@ -27,7 +27,7 @@ from urllib import request as urlrequest
 
 import utils
 from programs import match_program  # curated cross-source program registry
-from rss import is_relevant  # shared whole-word AI/autonomy relevance gate
+from rss import is_relevant_procurement  # stricter AI/autonomy gate for contracts
 
 API_URL = "https://api.sam.gov/opportunities/v2/search"
 KEYWORDS = ["artificial intelligence", "machine learning", "autonomous", "unmanned"]
@@ -37,19 +37,50 @@ _TAG_RE = re.compile(r"<[^>]+>")
 
 
 class SamQuotaExceeded(Exception):
-    """Raised when SAM.gov returns its daily-quota 429 (code 900804).
+    """Raised when SAM.gov returns its daily-quota 429 (code 900804), or when our
+    own per-run request budget is reached.
 
     SAM.gov's public key has a hard daily request quota; once hit, every further
     call fails until the next UTC-midnight reset. We abort the run rather than
-    burn time on doomed calls.
+    burn time on doomed calls — and, more importantly, cap our own requests up
+    front (see RequestBudget) so a single run never trips the quota to begin with.
     """
+
+
+class RequestBudget:
+    """Hard cap on the number of api.sam.gov calls a single run may make.
+
+    SAM.gov's free (non-federal) key has a very low daily request quota, and the
+    biggest consumer is the notice-description endpoint — ONE extra call per
+    opportunity (see _resolve_description). Without a cap, a backfill fans out to
+    hundreds of calls and trips the quota (HTTP 429, code 900804) for the rest of
+    the UTC day. This budget counts EVERY sam.gov call (search pages + each
+    description fetch); once exhausted the run stops early with what it has, the
+    same graceful path as an actual 429.
+
+    Default is deliberately conservative to fit the free tier — raise
+    --max-requests if your key is a higher-quota (e.g. federal system) account.
+    """
+
+    def __init__(self, max_requests: int | None):
+        self.max = max_requests
+        self.used = 0
+
+    def exhausted(self) -> bool:
+        return self.max is not None and self.used >= self.max
+
+    def spend(self) -> None:
+        """Reserve one request; raise if that would exceed the budget."""
+        if self.max is not None and self.used >= self.max:
+            raise SamQuotaExceeded(f"per-run request budget ({self.max}) reached")
+        self.used += 1
 
 
 def _looks_like_url(text: str) -> bool:
     return text.strip().lower().startswith(("http://", "https://"))
 
 
-def _resolve_description(raw: str, api_key: str | None) -> str:
+def _resolve_description(raw: str, api_key: str | None, budget: RequestBudget | None = None) -> str:
     """Return plain-text notice context.
 
     SAM.gov's `description` field is a *URL* to the notice text
@@ -58,6 +89,10 @@ def _resolve_description(raw: str, api_key: str | None) -> str:
     relevance-checked on content — not just the cryptic FSC-coded title. A
     non-URL value (e.g. offline fixtures) is returned as-is; a fetch failure or
     missing key yields "" (the caller then falls back to a title-only check).
+
+    Each real fetch spends one unit of `budget`; when the budget is exhausted
+    this raises SamQuotaExceeded (handled by the caller as a graceful partial
+    stop) BEFORE making the call, so we never overshoot the daily quota.
     """
     raw = (raw or "").strip()
     if not raw:
@@ -66,6 +101,8 @@ def _resolve_description(raw: str, api_key: str | None) -> str:
         return raw
     if not api_key:
         return ""
+    if budget is not None:
+        budget.spend()  # raises SamQuotaExceeded if the cap is reached
     url = raw + ("&" if "?" in raw else "?") + urlparse.urlencode({"api_key": api_key})
     req = urlrequest.Request(url, headers={"Accept": "application/json", "User-Agent": utils.USER_AGENT})
     try:
@@ -146,7 +183,8 @@ def map_opportunity(op: dict[str, Any], description: str) -> dict[str, Any]:
         contract_value=amount,
         issuing_agency=op.get("fullParentPathName") or op.get("organizationType"),
         awarded_to=awardee,
-        significance=4 if is_award else 3,
+        # Significance by known-project relevance, not award size or stage.
+        significance=utils.program_significance(program),
     )
 
 
@@ -167,14 +205,28 @@ def _date_windows(posted_from: str, posted_to: str) -> list[tuple[str, str]]:
     return windows
 
 
-def fetch_live(api_key: str, posted_from: str, posted_to: str, limit: int) -> list[dict[str, Any]]:
-    """Paginate the Opportunities API across all keywords and ≤1-year windows."""
+def fetch_live(
+    api_key: str, posted_from: str, posted_to: str, limit: int, budget: RequestBudget
+) -> list[dict[str, Any]]:
+    """Paginate the Opportunities API across all keywords and ≤1-year windows.
+
+    Every search page spends one unit of `budget`; when it's exhausted (or the
+    API returns its 429), search stops and returns what it has, leaving room in
+    the daily quota for the per-notice description fetches that follow.
+    """
     collected: list[dict[str, Any]] = []
     windows = _date_windows(posted_from, posted_to)
     for win_from, win_to in windows:
         for keyword in KEYWORDS:
             offset = 0
             while len(collected) < limit:
+                if budget.exhausted():
+                    print(
+                        f"[sam_gov] request budget ({budget.max}) reached during search "
+                        f"— stopping with {len(collected)} opportunity/ies.",
+                        file=sys.stderr,
+                    )
+                    return collected[:limit]
                 params = {
                     "api_key": api_key,
                     "q": keyword,
@@ -185,9 +237,19 @@ def fetch_live(api_key: str, posted_from: str, posted_to: str, limit: int) -> li
                 }
                 url = f"{API_URL}?{urlparse.urlencode(params)}"
                 req = urlrequest.Request(url, headers={"Accept": "application/json", "User-Agent": utils.USER_AGENT})
+                budget.spend()
                 try:
                     with urlrequest.urlopen(req, timeout=30) as resp:
                         data = json.loads(resp.read().decode("utf-8"))
+                except urlerror.HTTPError as e:
+                    if e.code == 429:  # daily quota hit mid-search — stop entirely
+                        print(
+                            "[sam_gov] daily quota (HTTP 429) during search — stopping early.",
+                            file=sys.stderr,
+                        )
+                        return collected[:limit]
+                    print(f"[sam_gov] {keyword} {win_from}-{win_to} failed: {e}", file=sys.stderr)
+                    break
                 except Exception as e:  # one bad window/keyword shouldn't kill the run
                     print(f"[sam_gov] {keyword} {win_from}-{win_to} failed: {e}", file=sys.stderr)
                     break
@@ -212,7 +274,37 @@ def main() -> int:
         default=datetime.now(timezone.utc).strftime("%m/%d/%Y"),
         help="MM/DD/YYYY (default: today)",
     )
+    parser.add_argument(
+        "--recent-days",
+        type=int,
+        default=None,
+        help=(
+            "Only search notices posted in the last N days (overrides --posted-from). "
+            "Use for periodic reruns so each run scans just new contracts and stays "
+            "cheap on the daily quota."
+        ),
+    )
+    parser.add_argument(
+        "--max-requests",
+        type=int,
+        default=8,
+        help=(
+            "Hard cap on api.sam.gov calls this run (search pages + one per notice "
+            "description). SAM.gov's free key has a very low daily quota; the default "
+            "keeps a single run under it. Raise it for a higher-quota key; set 0 for "
+            "unlimited (not recommended on a free key)."
+        ),
+    )
     args = parser.parse_args()
+
+    # 0 means "no cap"; any positive value is a hard per-run request budget.
+    budget = RequestBudget(None if args.max_requests == 0 else args.max_requests)
+
+    posted_from = args.posted_from
+    if args.recent_days is not None:
+        posted_from = (
+            datetime.now(timezone.utc) - timedelta(days=args.recent_days)
+        ).strftime("%m/%d/%Y")
 
     if args.fixtures:
         api_key = None
@@ -223,35 +315,43 @@ def main() -> int:
         if not api_key:
             print("ERROR: SAM_GOV_API_KEY not set (or use --fixtures).", file=sys.stderr)
             return 2
-        opportunities = fetch_live(api_key, args.posted_from, args.posted_to, args.limit)
+        try:
+            opportunities = fetch_live(api_key, posted_from, args.posted_to, args.limit, budget)
+        except SamQuotaExceeded as e:
+            print(f"[sam_gov] {e} during search — stopping with nothing fetched.", file=sys.stderr)
+            opportunities = []
 
-    # SAM.gov's `q` search matches loosely (e.g. "machine" in "machining"), so
-    # apply the shared whole-word relevance gate on title + fetched notice text
-    # (moderate bar: a hit in either keeps the notice). This also enriches each
-    # entry with real description context in place of the raw notice-desc URL.
+    # SAM.gov's `q` search matches loosely (e.g. "machine" in "machining") and
+    # the "unmanned" keyword pulls routine platform-support awards, so apply the
+    # stricter procurement gate on title + fetched notice text (requires a real
+    # AI/autonomy term; bare "unmanned"/"drone" don't qualify). This also
+    # enriches each entry with real description context vs. the raw notice URL.
     mapped: list[dict[str, Any]] = []
     dropped = 0
     quota_hit = False
     for op in opportunities:
         title = op.get("title") or op.get("noticeId") or ""
         try:
-            description = _resolve_description(op.get("description") or "", api_key)
+            description = _resolve_description(op.get("description") or "", api_key, budget)
         except SamQuotaExceeded as e:
             print(f"[sam_gov] {e} — stopping early with what we have.", file=sys.stderr)
             quota_hit = True
             break
         if not args.fixtures:
             utils.polite_sleep(0.5)  # throttle the notice-desc endpoint
-        if not is_relevant(f"{title} {description}"):
+        if not is_relevant_procurement(f"{title} {description}"):
             dropped += 1
             continue
         mapped.append(map_opportunity(op, description))
 
     items = utils.local_dedupe(mapped)
-    note = " [quota hit — partial]" if quota_hit else ""
+    note = " [budget/quota hit — partial]" if quota_hit else ""
+    budget_note = f"; {budget.used} api.sam.gov request(s) used" + (
+        f" of {budget.max} budgeted" if budget.max is not None else " (uncapped)"
+    )
     print(
         f"[sam_gov] {len(items)} milestone(s) prepared "
-        f"({dropped} dropped as not AI-relevant of {len(opportunities)} fetched){note}.",
+        f"({dropped} dropped as not AI-relevant of {len(opportunities)} fetched){note}{budget_note}.",
         file=sys.stderr,
     )
     utils.post_batch(items, dry_run=args.dry_run)

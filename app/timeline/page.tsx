@@ -17,8 +17,8 @@ export default async function TimelinePage() {
         US Military AI Adoption, 2016–2026
       </h1>
       <p className="mt-4 max-w-2xl text-gray-400">
-        Filter by category and year. Click any entry for details and verified
-        sources, or open its full adoption profile.
+        Filter by category and year. Click any entry for details, or open its
+        full adoption profile.
       </p>
       <TimelineExplorer initialData={items} />
     </main>

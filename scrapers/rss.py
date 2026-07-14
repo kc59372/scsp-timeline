@@ -93,6 +93,33 @@ def is_relevant(text: str) -> bool:
     return strong or _has_word(t, "drone")
 
 
+# Stricter accept set for PROCUREMENT (SAM.gov / USAspending). The award APIs are
+# searched with broad keywords incl. "unmanned", which returns many routine
+# platform-support awards (spare parts, maintenance, base ops for unmanned
+# systems) that are NOT AI milestones. For contracts we therefore require a real
+# AI/autonomy signal and deliberately DROP bare "unmanned" and "drone" — an
+# unmanned-platform contract only counts if it also names autonomy/AI. This is
+# what keeps the admin queue from filling with keyword-noise contracts.
+PROCUREMENT_RELEVANCE = (
+    "artificial intelligence", "machine learning", "autonomous", "autonomy",
+    "counter-uas", "counter uas", "algorithm", "generative", "neural",
+    "computer vision", "deep learning", "large language model", "predictive analytics",
+    "autonomy software", "autonomous system",
+)
+
+
+def is_relevant_procurement(text: str) -> bool:
+    """Whole-word AI/autonomy relevance for contracts (stricter than is_relevant).
+
+    Accepts only on a genuine AI/autonomy term or the uppercase "AI" acronym;
+    bare "unmanned"/"drone" do NOT qualify on their own (too noisy for awards).
+    """
+    t = text.lower()
+    return _AI_ACRONYM.search(text) is not None or any(
+        _has_word(t, k) for k in PROCUREMENT_RELEVANCE
+    )
+
+
 def infer_category(text: str) -> str:
     t = text.lower()
     for category, keywords in CATEGORY_RULES:
@@ -150,7 +177,9 @@ def map_entry(entry: Any, source_name: str, default_event_type: str) -> dict[str
         program_slug_value=program["slug"] if program else None,
         event_type=infer_event_type(haystack, default_event_type),
         event_date=event_date,
-        significance=2,
+        # Significance by known-project relevance (4 if it names a tracked
+        # program, else 2), not by any money or recency signal.
+        significance=utils.program_significance(program),
     )
 
 

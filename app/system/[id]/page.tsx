@@ -21,10 +21,6 @@ export default async function SystemProfile({ params }: { params: { id: string }
   if (!m) notFound();
 
   const style = categoryStyle(m.category);
-  const sources = [
-    ...(m.sourceUrl ? [{ url: m.sourceUrl, label: m.sourceName ?? m.sourceUrl }] : []),
-    ...m.additionalSources.map((url) => ({ url, label: url })),
-  ];
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -100,32 +96,6 @@ export default async function SystemProfile({ params }: { params: { id: string }
             </span>
           ))}
         </div>
-      )}
-
-      {/* sources */}
-      {sources.length > 0 && (
-        <section className="mt-10 rounded-md border border-edge bg-black/30 p-4">
-          <div className="mb-3 font-mono text-[0.7rem] font-bold uppercase tracking-wide text-gray-500">
-            Verified Public Sources
-          </div>
-          <ul className="flex flex-col gap-2">
-            {sources.map((s) => (
-              <li key={s.url}>
-                <a
-                  href={s.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 hover:underline"
-                >
-                  <span className="break-all">{s.label}</span>
-                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none" className="shrink-0">
-                    <path d="M3.5 1.5H10.5M10.5 1.5V8.5M10.5 1.5L1.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
       )}
     </main>
   );

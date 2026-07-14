@@ -46,7 +46,7 @@ Three primary research documents inform this project, produced by Amy, Kaci, and
 | Backend/API | Next.js API routes (serverless) |
 | Scraping | Python 3 (`urllib` + `feedparser`); official `.mil`/`.gov` + public-domain DoD APIs/RSS only |
 | Auth (admin) | NextAuth.js — single shared credential (env-based) |
-| Hosting | **Docker Compose self-host** (app + Postgres) — see `DEPLOY.md`. (Vercel + managed Postgres also works; Docker is what's implemented.) |
+| Hosting | **Vercel + Neon Postgres** — live at https://scsp-timeline.vercel.app (see `DEPLOY_VERCEL.md`). Docker Compose self-host also works (`DEPLOY.md`) but is no longer the deployment. |
 | Data ingestion | GitHub Actions cron (daily) → token-protected `/api/ingest` |
 
 ---
@@ -334,7 +334,7 @@ and public-domain DoD sources. Each scraper emits normalized events (with an
 
 | Source | Reach | Key |
 |---|---|---|
-| SAM.gov (solicitations + awards) | 2016→present (chunked ≤1yr/call) | free |
+| SAM.gov (solicitations + awards) | recent window, quota-capped (`--recent-days`/`--max-requests`; chunked ≤1yr/call) | free (low daily quota) |
 | USAspending.gov (DoD contract awards) | 2016→present | none |
 | DVIDS (DoD news / press releases) | 2016→present (historical) | free public |
 | Congress.gov (AI legislation) | recent (title search) | free |
@@ -449,20 +449,40 @@ and public-domain DoD sources. Each scraper emits normalized events (with an
    - Token-gated (`INGEST_TOKEN`); upserts the `Program` by slug and links the event
    - Event dedup hash (`sha256(slug|eventType|eventDate|sourceUrl)`)
    - **Verification gate (`lib/verify.ts`)** runs on each *new* event to set
-     `entryStatus` (instead of a blanket `PENDING`), cutting review load:
-     - **Auto-approve → `APPROVED`:** names a curated program (`scrapers/programs.json`)
-       **and** high significance (`significance ≥ 4`, e.g. ≥ $100M awards).
-     - **Queue → `PENDING`:** relevant by rule (program match, or the shared
-       AI/autonomy keyword filter) — needs human review / merge.
-     - **Adjudicate (LLM):** entries with no keyword signal go to Claude
-       (`ANTHROPIC_API_KEY`) — relevant → `PENDING`, irrelevant → `REJECTED`.
-       The LLM never auto-approves; if the key is unset or the call fails, the
-       entry safely defaults to `PENDING`.
-     - Keyword-relevant items in an academic/personnel framing with no
-       operational/procurement signal (e.g. a graduate profile that mentions
-       "machine learning") are routed to the LLM rather than auto-queued, so
-       they can be rejected; operational items (e.g. an "unmanned … exercise")
-       pass straight to review.
+     `entryStatus` (instead of a blanket `PENDING`), cutting review load. It
+     handles two entry shapes differently:
+     - **Registry match (any source) → `APPROVED`:** the item names a curated
+       program (`scrapers/programs.json`). A hand-maintained registry hit is
+       high-confidence on its own — fast path, no LLM.
+     - **Procurement awards (SAM.gov / USAspending)** stay on the cheap keyword
+       path: AI/autonomy keyword relevance → `PENDING`; otherwise the LLM
+       decides `PENDING` vs `REJECTED`. Contracts never LLM-auto-approve (they
+       auto-approve only via the registry).
+     - **News (DVIDS / service RSS) → LLM 3-way triage:** the keyword filter
+       can't tell an AI-driven exercise from a workshop that merely discusses
+       AI (the word "challenge" appears in both a real exercise and a prize
+       competition), so news goes to Claude (`ANTHROPIC_API_KEY`) for a
+       curated-rubric decision:
+       - **`approve` → `APPROVED`:** AI/autonomy actually applied, demoed, used,
+         deployed, fielded, integrated, or automating a real task/mission
+         (incl. within an exercise/experiment), or concrete activity on a
+         specific named AI/autonomous system.
+       - **`review` → `PENDING`:** AI involved only peripherally (novelty use)
+         or an indirect investment in an external/academic program.
+       - **`reject` → `REJECTED`:** competitions/challenges/hackathons/prizes/
+         proposal deadlines, summits/workshops/offsites/"innovation days" that
+         only discuss or promote AI, items naming no specific technology or
+         application, non-defense uses, or items not actually about AI/autonomy.
+       The rubric is calibrated against human-labeled DVIDS/.mil examples.
+     - **No-key fallback (this deployment has no `ANTHROPIC_API_KEY`):** news
+       runs a **deterministic** version of the same triage — high-precision
+       keyword lists (`APPLY_SIGNALS` / `REJECT_SIGNALS` in `lib/verify.ts`)
+       drawn from the same labeled examples. It auto-approves clear "AI applied"
+       stories, auto-rejects clear talk-only/competition/non-defense ones, and
+       sends anything ambiguous (incl. mixed signals) to `PENDING`. Tuned so
+       nothing GOOD is auto-rejected and nothing BAD is auto-approved on the
+       label set; it is coarser than the LLM (more items land in `PENDING`).
+       Setting `ANTHROPIC_API_KEY` upgrades news triage to the LLM automatically.
      - Each verdict's rationale is stored on `Milestone.verifyReason` and shown
        in the admin queue. Re-ingesting an existing event **preserves** its
        current `entryStatus` (an admin's approve/reject is never re-flipped).
@@ -547,11 +567,20 @@ Post-MVP                                                                ✅ Done
 - **Policy-first clarity:** Every milestone must be understandable to a non-technical Washington policymaker. Jargon explained or avoided.
 - **Source integrity:** Every entry needs a `sourceUrl`. No unsourced entries go live. Multiple sources preferred (as in the team's research).
 - **Adoption velocity as a narrative:** The site should convey *how fast* US military AI adoption is accelerating — the core analytical insight per the pitch deck.
-- **Admin trust gate (with a narrow auto-approve):** Scraped entries are reviewed
-  before going public, *except* the high-confidence set that the ingest verifier
-  (`lib/verify.ts`) auto-approves — entries that name a curated program **and**
-  carry a strong significance signal. Everything else still requires human review;
-  clearly-irrelevant entries are auto-rejected (kept in the DB, not deleted).
+- **Admin trust gate (auto-approve by known-program match):** Scraped entries are
+  reviewed before going public, *except* the high-confidence set the ingest
+  verifier (`lib/verify.ts`) auto-approves — entries that name a **curated program**
+  (`scrapers/programs.json`). Auto-approval is driven by relevance to a known
+  project name, **not** by contract dollar value. Everything else still requires
+  human review (news via the LLM 3-way triage — or a deterministic keyword
+  fallback when no `ANTHROPIC_API_KEY` is set, as on this deployment; procurement
+  via the keyword path); clearly-irrelevant entries are auto-rejected (kept in
+  the DB, not deleted).
+- **Significance = known-project relevance, not money:** A milestone's
+  `significance` reflects whether it maps to a tracked program (a named,
+  known project), **not** the size of a contract. A $9B award that names no known
+  program is not automatically "significant"; a contract tied to Maven or
+  Replicator is. Scrapers score significance by registry match, not dollar value.
 - **Speed over perfection:** MVP in 1–2 weeks. Ship working, iterate later.
 - **Future-proof schema:** The `country` field is stubbed in the schema to support future expansion without a migration — but no China-facing features are built now.
 
@@ -572,11 +601,12 @@ Post-MVP                                                                ✅ Done
 ## Key Decisions
 
 1. **Project name / branding** — ⏳ still open, needed before public launch
-2. **Hosting** — ✅ resolved: Docker self-host (`DEPLOY.md`)
+2. **Hosting** — ✅ resolved: Vercel + Neon Postgres (`DEPLOY_VERCEL.md`); Docker self-host remains as a fallback (`DEPLOY.md`)
 3. **Admin accounts** — ✅ resolved: one shared credential for the team (per-user auth is a future upgrade)
-4. **Significance scoring** — heuristic for scraped awards (scaled by contract value); manual for curated/reviewed entries
+4. **Significance scoring** — ✅ resolved: **by known-program match, not money** — 4 if a scraped entry maps to a curated program (`scrapers/programs.json`), else 2; manual for curated/reviewed entries
 5. **Classification scope** — unclassified only; `.mil`/`.gov` + public-domain DoD sources — no classified sources in the pipeline
-6. **Deployment public URL** — ⏳ pending: needs a host + domain (the daily scrape requires a deployed, reachable `/api/ingest`)
+6. **Deployment public URL** — ✅ resolved: https://scsp-timeline.vercel.app (daily scrape POSTs to its token-gated `/api/ingest`)
+7. **News triage without an API key** — the prod deployment has no `ANTHROPIC_API_KEY`, so the daily automated scrape triages news with the deterministic keyword fallback. For higher-quality triage we **periodically rerun the scraper locally with Claude Code as the triage engine** (dry-run scrape → Claude classifies news via the `lib/verify.ts` 3-bucket rubric → ingest to Neon). Optionally set `ANTHROPIC_API_KEY` on Vercel to upgrade the automated path to the LLM.
 
 ---
 

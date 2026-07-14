@@ -2,20 +2,33 @@
  * Ingest verification — a relevance + auto-approval gate that runs on every
  * scraped entry BEFORE it reaches the admin queue, to cut human review load.
  *
- * Hybrid design (rules first, LLM only for the ambiguous middle):
- *   Tier 1 — AUTO-APPROVE (APPROVED): the entry names a curated program
- *            (scrapers/programs.json) AND carries a strong significance signal
- *            (significance >= 4, i.e. >= $100M awards, or contractValue >= $100M).
- *            High-confidence, tracked, material → skip human review.
- *   Tier 2 — QUEUE (PENDING): the entry is clearly relevant by rules — it names
- *            a curated program (any significance) or trips the shared AI/autonomy
- *            keyword filter (ported from scrapers/rss.py `is_relevant`). Still
- *            needs a human to confirm / merge.
- *   Tier 3 — ADJUDICATE (LLM): no keyword signal at all → an ambiguous entry.
- *            Claude decides relevant (PENDING) vs irrelevant (REJECTED) so we
- *            never auto-reject something the keyword filter merely missed. The
- *            LLM never auto-approves. If ANTHROPIC_API_KEY is unset or the call
- *            fails/refuses, we fall back to PENDING (safe: keep it in review).
+ * Two entry shapes are handled differently:
+ *
+ *   PROCUREMENT (SAM.gov / USAspending awards — high volume, structured):
+ *     - Tier 1: names a curated program (scrapers/programs.json) → AUTO-APPROVE.
+ *     - Tier 2: trips the AI/autonomy keyword filter → QUEUE (PENDING).
+ *     - Tier 3: no keyword signal → LLM decides PENDING vs REJECTED (never
+ *       auto-approves a contract; those approve only via the registry).
+ *
+ *   NEWS (DVIDS / service RSS — needs a semantic judgment the keywords can't
+ *   make: "AI-driven exercise" is adoption, "workshop to discuss AI" is not,
+ *   and the word "challenge" appears in BOTH a real exercise and a prize
+ *   competition):
+ *     - Tier 1: names a curated program → AUTO-APPROVE.
+ *     - Otherwise → LLM 3-way triage against the curated rubric below:
+ *         APPROVE  — AI/autonomy actually applied, demoed, used, deployed,
+ *                    fielded, integrated, or automating a real task/mission
+ *                    (incl. within an exercise/experiment), or concrete
+ *                    activity on a specific named AI/autonomous system.
+ *         REVIEW   — AI involved only peripherally (novelty use) or an indirect
+ *                    investment in an external/academic program → PENDING.
+ *         REJECT   — competitions/challenges/hackathons/prizes/proposal
+ *                    deadlines, summits/workshops/offsites/"innovation days"
+ *                    that only discuss/promote AI, items naming no specific
+ *                    technology or application, non-defense uses, or items not
+ *                    actually about AI/autonomy.
+ *     - If ANTHROPIC_API_KEY is unset or the call fails/refuses → PENDING
+ *       (safe: keep it in review).
  *
  * Rejected entries are still written to the DB (as REJECTED) so reviewers can
  * audit and tune the filter via the admin `?status=REJECTED` view.
@@ -41,10 +54,16 @@ export interface Verdict {
   method:
     | "registry-autoapprove"
     | "rule-relevant"
+    | "llm-approve"
+    | "llm-review"
+    | "llm-reject"
     | "llm-relevant"
     | "llm-irrelevant"
     | "llm-skipped"
-    | "llm-error";
+    | "llm-error"
+    | "heuristic-approve"
+    | "heuristic-review"
+    | "heuristic-reject";
   reason: string;
 }
 
@@ -110,36 +129,173 @@ export function isTangential(text: string): boolean {
   return hasAny(t, TANGENTIAL_CONTEXT) && !hasAny(t, ADOPTION_SIGNAL);
 }
 
-// ── LLM adjudication (Tier 3) ────────────────────────────────────────────────
+// ── Deterministic fallback triage (used when ANTHROPIC_API_KEY is unset) ──────
+//
+// The LLM is the better judge, but this project runs without a key, so news
+// items need a rules-only triage. These lists are HIGH-PRECISION signals drawn
+// from human-labeled DVIDS/.mil examples and tuned so that, on that label set,
+// nothing GOOD is auto-rejected and nothing BAD is auto-approved — ambiguous
+// items fall through to PENDING (human review). This is coarser than the LLM:
+// it will send some genuinely-good stories to PENDING rather than risk a wrong
+// auto-decision. Substring match (lowercased); phrases include the "ai" token
+// so they can't false-hit an incidental "ai".
 
-const LLM_SYSTEM =
-  "You are a relevance filter for a US military AI adoption timeline (2016–2026). " +
-  "The timeline tracks US Department of Defense / .mil / .gov milestones in artificial " +
-  "intelligence and autonomy: procurement contracts and awards, fielded or in-development " +
-  "AI/autonomous systems (drones, unmanned vehicles, C2, ISR, targeting, logistics, cyber), " +
-  "test/evaluation events, and AI-related policy or directives. " +
-  "Decide whether a scraped item is genuinely about US military AI/autonomy adoption. " +
-  "Reject items that are unrelated to AI/autonomy adoption (routine personnel moves, " +
-  "ceremonies, academic degree/thesis profiles, general human-interest news, recreational " +
-  "drone shows), non-US, or purely commercial with no defense AI angle. " +
-  "Be conservative: when genuinely unsure, mark it relevant so a human reviews it.";
+// Talk-only / competition / non-defense framing → reject. None of these appear
+// in any GOOD example. NOTE: bare "challenge" is deliberately absent — it occurs
+// as a verb in a real exercise ("Iron Forge Challenges … in an AI-driven
+// exercise"); only competition-shaped phrases are listed.
+const REJECT_SIGNALS = [
+  // gatherings that only discuss/promote AI
+  "summit", "workshop", "offsite", "off-site", "symposium", "conference",
+  "industry day", "innovation day", "hackathon", "town hall", "panel discussion",
+  // competitions / prizes / solicita­tion-of-ideas
+  "innovation challenge", "design challenge", "challenge teams", "prize",
+  "cash award", "you could win", "could win $", "win $", "$50,000", "$50000",
+  "proposal deadline", "call for proposals", "submission deadline",
+  // broad "we should adopt AI" talk
+  "prioritizes innovation", "explore ai", "explores ai", "exploring ai",
+  "discuss ai", "discusses ai",
+  // non-defense applications
+  "forest", "reforestation", "wildfire", "wildlife",
+];
+
+// AI/autonomy actually being applied/used/fielded → approve. High-precision
+// phrases; none appear in any BAD/MAYBE example.
+const APPLY_SIGNALS = [
+  "ai-driven", "ai driven", "ai-generated", "ai generated", "ai-enabled",
+  "ai enabled", "ai-powered", "ai powered",
+  "harnesses ai", "harness ai", "harnessed ai", "harnessing ai",
+  "pioneers ai", "pioneer ai", "pioneering ai",
+  "ai sprint", "showcase ai", "showcases ai", "showcasing ai", "ai dashboard",
+  "automate", "automates", "automating", "automated",
+  "systems integration", "ai integration", "integrates", "integrating ai",
+  "integrated ai", "demonstrat", "deployed", "fielded",
+];
+
+const containsAny = (lower: string, phrases: string[]) =>
+  phrases.filter((p) => lower.includes(p));
+
+/**
+ * Rules-only triage for when no LLM key is configured. Conservative by design:
+ * auto-approve only on a clear "AI applied" signal, auto-reject only on a clear
+ * "talk-only/competition/non-defense" signal (or no AI signal at all), and send
+ * everything else — including mixed signals — to PENDING.
+ */
+function heuristicTriage(haystack: string, allowApprove: boolean): Verdict {
+  if (!isRelevant(haystack)) {
+    return {
+      status: "REJECTED",
+      method: "heuristic-reject",
+      reason: "No AI/autonomy signal (rules-only; no LLM key)",
+    };
+  }
+  const t = haystack.toLowerCase();
+  const rejects = containsAny(t, REJECT_SIGNALS);
+  const applies = containsAny(t, APPLY_SIGNALS);
+
+  if (rejects.length && applies.length) {
+    return {
+      status: "PENDING",
+      method: "heuristic-review",
+      reason: `Mixed signals ("${rejects[0]}" vs "${applies[0]}") — needs review (rules-only)`,
+    };
+  }
+  if (rejects.length) {
+    return {
+      status: "REJECTED",
+      method: "heuristic-reject",
+      reason: `Talk-only/competition/non-defense signal: "${rejects[0]}" (rules-only; no LLM key)`,
+    };
+  }
+  if (applies.length) {
+    return allowApprove
+      ? {
+          status: "APPROVED",
+          method: "heuristic-approve",
+          reason: `AI-applied signal: "${applies[0]}" (rules-only; no LLM key)`,
+        }
+      : {
+          status: "PENDING",
+          method: "heuristic-review",
+          reason: "Relevant; queued for review (rules-only; no LLM key)",
+        };
+  }
+  return {
+    status: "PENDING",
+    method: "heuristic-review",
+    reason: "No decisive signal — queued for review (rules-only; no LLM key)",
+  };
+}
+
+// ── LLM triage ───────────────────────────────────────────────────────────────
+
+// The rubric below is calibrated against a set of human-labeled DVIDS/.mil
+// examples. The decisive question is whether AI/autonomy is actually being
+// *applied* (approve) versus merely discussed, competed over, or invested in
+// elsewhere (review/reject). Keyword presence alone is not enough — e.g. the
+// word "challenge" appears both in a real AI-driven exercise (approve) and in a
+// prize competition (reject).
+const LLM_SYSTEM = `You triage scraped US .mil/.gov news items for a US military AI adoption timeline (2016–2026). The timeline tracks US Department of Defense milestones where artificial intelligence or autonomy is actually adopted: fielded or in-development AI/autonomous systems (drones, unmanned vehicles, C2, ISR, targeting, logistics, cyber), AI applied within exercises/experiments/operations, AI automating real military tasks, and AI-related policy or directives.
+
+Classify each item as exactly one of: "approve", "review", or "reject".
+
+APPROVE — AI or autonomy is actually being applied, demonstrated, used, deployed, fielded, integrated, or is automating a real military task or mission — including inside an exercise, experiment, or operational workflow — OR the item reports concrete activity on a specific named AI/autonomous system or project. Modest mission relevance still counts if a specific AI application or system is clearly described. Examples of APPROVE:
+- AI capabilities demonstrated during a military exercise.
+- A service actively integrating an AI experiment (e.g., an AI "sprint" or named experiment).
+- An AI tool/dashboard built and used by operators.
+- Deployment or integration of specific unmanned/autonomous systems.
+- Using AI to automate a real military process (e.g., the awards/paperwork process).
+- Running an exercise that is AI-driven or uses AI-generated scenarios.
+
+REVIEW — AI/autonomy is involved but only peripherally, as a novelty, or indirectly: a minor/gimmick use (e.g., an AI-generated mascot for a safety campaign), or an indirect investment in an external/academic research program that is not yet a fielded military capability. These need a human. Examples of REVIEW:
+- An AI-generated mascot used to promote a safety culture.
+- A defense agency funding an outside university AI research program.
+
+REJECT — do NOT include:
+- Competitions, challenges, hackathons, prize/cash-award announcements, or proposal/submission deadlines — these are about the contest or funding, not a fielded capability. (Note: "challenge" can also be an ordinary verb in a real exercise — judge by whether AI is actually applied, not by the word.)
+- Summits, workshops, offsites, symposia, conferences, panels, "innovation days," or "industry days" that only discuss, explore, or promote adopting AI without applying a specific capability.
+- Items that name no specific technology, system, project, or concrete application — only broad "AI adoption / innovation / force design" talk.
+- Non-defense applications (e.g., environmental/forest work).
+- Items that do not actually involve AI or autonomy.
+Examples of REJECT:
+- "Meet the DARPA [X] Challenge teams" — a competition/hackathon about prize money.
+- "Into algorithms? You could win $50,000" — a prize challenge, no specific system.
+- An AI/ML "innovation challenge" proposal-deadline extension.
+- An "AI summit" that accelerates broad capabilities but names no specific technology.
+- Leaders "explore AI as a force multiplier" at a strategic offsite workshop.
+- A directorate "hosts an Innovation Day" — an event about AI, not applying it.
+- A command "prioritizes innovation" with a task force but names no specific technology.
+- An interagency delegation "visits" an unmanned/AI task force — a visit, no specific project.
+
+Lean toward APPROVE when a specific AI/autonomy application or system is clearly described. Lean toward REJECT for talk-only gatherings and competitions. Use REVIEW only for genuinely peripheral or indirect AI involvement.`;
 
 const LLM_SCHEMA = {
   type: "object",
   properties: {
-    relevant: { type: "boolean" },
+    decision: { type: "string", enum: ["approve", "review", "reject"] },
     reason: { type: "string" },
   },
-  required: ["relevant", "reason"],
+  required: ["decision", "reason"],
   additionalProperties: false,
 } as const;
 
-async function llmAdjudicate(input: VerifyInput, haystack: string): Promise<Verdict> {
+type Decision = "approve" | "review" | "reject";
+
+/**
+ * LLM triage. `allowApprove` gates the "approve" → APPROVED mapping: news items
+ * may be auto-approved, but procurement items never are (an "approve" verdict is
+ * clamped to PENDING there — contracts auto-approve only via the registry).
+ */
+async function llmClassify(
+  input: VerifyInput,
+  haystack: string,
+  allowApprove: boolean,
+): Promise<Verdict> {
   if (!process.env.ANTHROPIC_API_KEY) {
     return {
       status: "PENDING",
       method: "llm-skipped",
-      reason: "No ANTHROPIC_API_KEY set — ambiguous entry defaulted to review",
+      reason: "No ANTHROPIC_API_KEY set — entry defaulted to review",
     };
   }
 
@@ -170,27 +326,53 @@ async function llmAdjudicate(input: VerifyInput, haystack: string): Promise<Verd
     if (!text || text.type !== "text") {
       return { status: "PENDING", method: "llm-error", reason: "No classification returned" };
     }
-    const parsed = JSON.parse(text.text) as { relevant: boolean; reason: string };
+    const parsed = JSON.parse(text.text) as { decision: Decision; reason: string };
     const reason = (parsed.reason ?? "").slice(0, 300);
-    return parsed.relevant
-      ? { status: "PENDING", method: "llm-relevant", reason: reason || "Judged relevant by LLM" }
-      : { status: "REJECTED", method: "llm-irrelevant", reason: reason || "Judged irrelevant by LLM" };
+
+    switch (parsed.decision) {
+      case "approve":
+        return allowApprove
+          ? { status: "APPROVED", method: "llm-approve", reason: reason || "AI adoption applied (LLM)" }
+          : { status: "PENDING", method: "llm-relevant", reason: reason || "Relevant (LLM); queued for review" };
+      case "reject":
+        return { status: "REJECTED", method: "llm-reject", reason: reason || "Not AI adoption (LLM)" };
+      case "review":
+      default:
+        return { status: "PENDING", method: "llm-review", reason: reason || "Peripheral AI use (LLM)" };
+    }
   } catch (e) {
     // Any failure (network, parse, rate limit) → keep the entry in review.
     return {
       status: "PENDING",
       method: "llm-error",
-      reason: `LLM adjudication failed: ${e instanceof Error ? e.message : String(e)}`,
+      reason: `LLM triage failed: ${e instanceof Error ? e.message : String(e)}`,
     };
   }
+}
+
+/**
+ * Dispatch the ambiguous middle: the LLM 3-way triage when a key is configured,
+ * otherwise the deterministic fallback. Both honor `allowApprove` (news may
+ * auto-approve; procurement may not).
+ */
+function classifyUnknown(
+  input: VerifyInput,
+  haystack: string,
+  allowApprove: boolean,
+): Promise<Verdict> | Verdict {
+  if (process.env.ANTHROPIC_API_KEY) return llmClassify(input, haystack, allowApprove);
+  return heuristicTriage(haystack, allowApprove);
 }
 
 // ── Entry point ──────────────────────────────────────────────────────────────
 
 /**
  * Classify a normalized scraped entry into APPROVED / PENDING / REJECTED.
- * Rules resolve the clear cases synchronously; only truly ambiguous entries
- * (no keyword signal) incur the LLM call, bounding cost on daily batches.
+ *
+ * A curated-program match always auto-approves (fast path, no LLM). After that,
+ * procurement awards stay on the cheap keyword path (they're high-volume and
+ * structured), while news items go to the LLM 3-way triage — the only reliable
+ * way to tell an AI-driven exercise from a workshop that merely discusses AI.
  */
 export async function verifyEntry(input: VerifyInput): Promise<Verdict> {
   const haystack = `${input.name} ${input.description}`.trim();
@@ -207,15 +389,20 @@ export async function verifyEntry(input: VerifyInput): Promise<Verdict> {
     };
   }
 
-  // Tier 2 — relevant by keyword but not a tracked program → queue for review.
-  if (isRelevant(haystack)) {
-    // A keyword match in an academic/personnel framing with no operational or
-    // procurement signal is only tangentially "AI" — send it to the LLM to
-    // decide review-vs-reject rather than auto-queueing it.
-    if (isTangential(haystack)) return llmAdjudicate(input, haystack);
-    return { status: "PENDING", method: "rule-relevant", reason: "AI/autonomy keyword relevance" };
+  // Procurement awards (SAM.gov / USAspending): structured, high-volume. Keep
+  // the cheap keyword path — relevant → queue; otherwise let the LLM decide
+  // queue-vs-reject. Contracts never LLM-auto-approve (allowApprove = false).
+  const isProcurement = input.category === "PROCUREMENT_CONTRACT" || input.contractValue != null;
+  if (isProcurement) {
+    if (isRelevant(haystack)) {
+      return { status: "PENDING", method: "rule-relevant", reason: "AI/autonomy keyword relevance" };
+    }
+    return classifyUnknown(input, haystack, /* allowApprove */ false);
   }
 
-  // Tier 3 — ambiguous (no keyword signal) → LLM decides queue vs reject.
-  return llmAdjudicate(input, haystack);
+  // News (DVIDS / service RSS): semantic 3-way triage. Auto-approve genuine
+  // AI-adoption stories, queue peripheral ones, and reject
+  // talk-only/competition/non-defense items — via the LLM when a key is set, or
+  // the deterministic fallback (this deployment) otherwise.
+  return classifyUnknown(input, haystack, /* allowApprove */ true);
 }
