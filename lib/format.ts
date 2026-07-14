@@ -65,6 +65,66 @@ export function devCycle(m: Milestone): DevCycle | null {
   return { years, bars };
 }
 
+// Acronyms that must stay upper-cased when we de-scream a raw contract title.
+const ACRONYMS = new Set([
+  "AI", "ML", "ISR", "C2", "C4ISR", "UAS", "UAV", "UUV", "USV", "USG", "DOD",
+  "JAIC", "CDAO", "ATR", "IR", "ADA", "US", "USA", "GPS", "EW", "T&E", "R&D",
+  "AMSTC", "TETRAS", "JWCC", "OTA", "RFI", "RFP", "II", "III", "IV",
+]);
+
+/**
+ * De-SCREAM a raw all-caps contract description into sentence-ish Title Case,
+ * preserving known acronyms. Leaves already mixed-case (author-clean) names
+ * untouched, so seed contract names pass through unchanged.
+ */
+function prettyCase(s: string): string {
+  const letters = s.replace(/[^A-Za-z]/g, "");
+  if (!letters) return s;
+  const upperShare = s.replace(/[^A-Z]/g, "").length / letters.length;
+  if (upperShare < 0.8) return s; // already mixed-case — leave it alone
+  return s.replace(/[A-Za-z]+/g, (w) =>
+    ACRONYMS.has(w.toUpperCase())
+      ? w.toUpperCase()
+      : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+  );
+}
+
+/**
+ * Build a scannable title for a procurement contract. USAspending awards arrive
+ * as raw ALL-CAPS descriptions with government boilerplate prefixes, truncated
+ * mid-word at the 120-char scrape cap (e.g. "IGF::OT::IGF AUTONOMOUS AND
+ * AUTOMATED WEAPON SYSTEM DESIG"). We strip the boilerplate, de-scream to Title
+ * Case, and fix mid-word truncation with an ellipsis. The full untouched text
+ * still lives in `description`, shown in the card body. Idempotent on clean
+ * seed names.
+ */
+export function contractTitle(name: string): string {
+  const raw = name.trim();
+  let s = raw
+    .replace(/^IGF::[A-Z]{2,3}::IGF\s+/i, "")
+    .replace(/^THE CONTRACTOR SHALL(?:\s+PERFORM)?\s+/i, "")
+    .replace(/^THIS (?:WORK )?EFFORT (?:IS |WILL )?(?:TO )?(?:INVESTIGATE |PROVIDE )?/i, "")
+    .replace(/^CONTRACT TO\s+/i, "")
+    .replace(/^\d+\s*MONTH\b.*?OP\.?\s*EST\.?\s*/i, "") // "12MONTH BASE PERIOD 12MONTH OP. EST "
+    .trim();
+  s = prettyCase(s);
+  // The scrape caps names at 120 chars, often mid-word — trim the partial
+  // trailing word and mark the elision.
+  if (raw.length >= 118 && !/[.!?]$/.test(raw)) {
+    s = s.replace(/\s+\S*$/, "").replace(/[,;:]+$/, "") + "…";
+  }
+  return s || raw;
+}
+
+/**
+ * Display title for any milestone — cleans up raw scraped procurement titles,
+ * passes everything else through untouched.
+ */
+export function displayName(m: Milestone): string {
+  if (m.category === "PROCUREMENT_CONTRACT") return contractTitle(m.name);
+  return m.name;
+}
+
 /** "$1.4B" / "$99.0M" / "$14.78M" style for contract values (raw USD in). */
 export function formatUsd(value: number | null): string | null {
   if (value == null) return null;

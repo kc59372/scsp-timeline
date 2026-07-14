@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Milestone } from "@/lib/milestones";
 import { categoryStyle, categoryLabel } from "@/lib/categories";
-import { formatMilestoneDate, primaryDateIso, devCycle, formatUsd } from "@/lib/format";
+import { formatMilestoneDate, primaryDateIso, devCycle, formatUsd, displayName } from "@/lib/format";
 
 /** Expandable timeline card. Ports legacy .timeline-card markup to Tailwind. */
 export function MilestoneCard({ milestone }: { milestone: Milestone }) {
@@ -42,7 +42,7 @@ export function MilestoneCard({ milestone }: { milestone: Milestone }) {
           onClick={(e) => e.stopPropagation()}
           className="hover:text-accent hover:underline"
         >
-          {milestone.name}
+          {displayName(milestone)}
         </Link>
       </h3>
 

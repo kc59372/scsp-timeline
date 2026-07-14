@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { fetchMilestone, type Milestone } from "@/lib/milestones";
 import { categoryStyle, categoryLabel } from "@/lib/categories";
 import { eventTypeLabel } from "@/lib/events";
-import { formatMilestoneDate, formatUsd } from "@/lib/format";
+import { formatMilestoneDate, formatUsd, displayName } from "@/lib/format";
 
 /** One row in the dates/details grid; renders nothing if value is empty. */
 function Field({ label, value }: { label: string; value: string | null | undefined }) {
@@ -48,7 +48,7 @@ export default async function SystemProfile({ params }: { params: { id: string }
         <span className={`rounded px-2.5 py-1 font-mono text-[0.7rem] font-semibold uppercase tracking-wide ${style.pill}`}>
           {categoryLabel(m.category)}
         </span>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight">{m.name}</h1>
+        <h1 className="mt-4 text-3xl font-bold tracking-tight">{displayName(m)}</h1>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-600">
           <span className="font-medium">{m.actor}</span>
           {m.systemStatus && (
