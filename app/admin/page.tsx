@@ -25,7 +25,7 @@ export default async function AdminPage({
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-signal">Admin</p>
           <h1 className="mt-2 text-2xl font-bold">Pending Review Queue</h1>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="mt-1 text-sm text-gray-600">
             {total} pending {total === 1 ? "entry" : "entries"} awaiting review. Nothing
             here is public until approved.
           </p>

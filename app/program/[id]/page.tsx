@@ -17,7 +17,7 @@ export default async function ProgramProfile({ params }: { params: { id: string 
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
-      <Link href="/timeline" className="font-mono text-xs text-gray-500 hover:text-blue-400">
+      <Link href="/timeline" className="font-mono text-xs text-gray-500 hover:text-accent">
         ← Back to timeline
       </Link>
 
@@ -26,29 +26,29 @@ export default async function ProgramProfile({ params }: { params: { id: string 
           <span className={`rounded px-2.5 py-1 font-mono text-[0.7rem] font-semibold uppercase tracking-wide ${style.pill}`}>
             {categoryLabel(program.category)}
           </span>
-          <span className="rounded bg-indigo-500/10 px-2 py-0.5 font-mono text-[0.7rem] uppercase tracking-wide text-indigo-300">
+          <span className="rounded bg-accent/10 px-2 py-0.5 font-mono text-[0.7rem] uppercase tracking-wide text-accent">
             Program
           </span>
         </div>
         <h1 className="mt-4 text-3xl font-bold tracking-tight">{program.name}</h1>
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-400">
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-600">
           <span className="font-medium">{program.actor}</span>
           {program.systemStatus && (
             <>
-              <span className="text-gray-600">·</span>
+              <span className="text-gray-400">·</span>
               <span className="font-mono text-xs uppercase text-gray-500">{program.systemStatus}</span>
             </>
           )}
           {program.subcategory && (
             <>
-              <span className="text-gray-600">·</span>
+              <span className="text-gray-400">·</span>
               <span>{program.subcategory}</span>
             </>
           )}
         </div>
       </div>
 
-      {program.description && <p className="mt-6 leading-relaxed text-gray-200">{program.description}</p>}
+      {program.description && <p className="mt-6 leading-relaxed text-ink">{program.description}</p>}
 
       {/* lifecycle track */}
       <section className="mt-10">
@@ -63,7 +63,7 @@ export default async function ProgramProfile({ params }: { params: { id: string 
         <ol className="relative flex flex-col gap-5 pl-6 before:absolute before:bottom-2 before:left-[3px] before:top-2 before:w-0.5 before:bg-edge">
           {events.map((e) => (
             <li key={e.id} className="relative">
-              <span className={`absolute -left-6 top-1.5 h-2.5 w-2.5 -translate-x-[3px] rounded-full border-2 border-ink ${style.dot}`} />
+              <span className={`absolute -left-6 top-1.5 h-2.5 w-2.5 -translate-x-[3px] rounded-full border-2 border-paper ${style.dot}`} />
               <div className="rounded-lg border border-edge bg-panel p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className={`font-mono text-[0.7rem] font-bold uppercase tracking-wide ${style.text}`}>
@@ -73,12 +73,12 @@ export default async function ProgramProfile({ params }: { params: { id: string 
                     {formatMilestoneDate(primaryDateIso(e)) ?? "date unknown"}
                   </span>
                 </div>
-                <h3 className="mt-1 font-semibold text-gray-100">
-                  <Link href={`/system/${e.id}`} className="hover:text-blue-400 hover:underline">
+                <h3 className="mt-1 font-semibold text-ink">
+                  <Link href={`/system/${e.id}`} className="hover:text-accent hover:underline">
                     {e.name}
                   </Link>
                 </h3>
-                {e.description && <p className="mt-2 text-sm leading-relaxed text-gray-400">{e.description}</p>}
+                {e.description && <p className="mt-2 text-sm leading-relaxed text-gray-600">{e.description}</p>}
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[0.7rem] text-gray-500">
                   {e.contractNumber && <span>Contract {e.contractNumber}</span>}
                   {e.contractValue != null && <span>{formatUsd(e.contractValue)}</span>}

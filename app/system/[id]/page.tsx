@@ -11,7 +11,7 @@ function Field({ label, value }: { label: string; value: string | null | undefin
   return (
     <div className="border-t border-edge py-3">
       <dt className="font-mono text-[0.65rem] uppercase tracking-wide text-gray-500">{label}</dt>
-      <dd className="mt-1 text-sm text-gray-200">{value}</dd>
+      <dd className="mt-1 text-sm text-ink">{value}</dd>
     </div>
   );
 }
@@ -24,7 +24,7 @@ export default async function SystemProfile({ params }: { params: { id: string }
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
-      <Link href="/timeline" className="font-mono text-xs text-gray-500 hover:text-blue-400">
+      <Link href="/timeline" className="font-mono text-xs text-gray-500 hover:text-accent">
         ← Back to timeline
       </Link>
 
@@ -32,15 +32,15 @@ export default async function SystemProfile({ params }: { params: { id: string }
       {m.program && (
         <Link
           href={`/program/${m.program.id}`}
-          className="mt-6 flex items-center justify-between gap-3 rounded-md border border-indigo-500/30 bg-indigo-500/10 px-4 py-3 hover:border-indigo-500/60"
+          className="mt-6 flex items-center justify-between gap-3 rounded-md border border-accent/30 bg-accent/10 px-4 py-3 hover:border-accent/60"
         >
-          <span className="text-sm text-gray-300">
-            <span className="font-mono text-[0.65rem] uppercase tracking-wide text-indigo-300">
+          <span className="text-sm text-gray-700">
+            <span className="font-mono text-[0.65rem] uppercase tracking-wide text-accent">
               {eventTypeLabel(m.eventType)} stage
             </span>{" "}
-            of <span className="font-semibold text-gray-100">{m.program.name}</span>
+            of <span className="font-semibold text-ink">{m.program.name}</span>
           </span>
-          <span className="shrink-0 font-mono text-xs text-indigo-300">View lifecycle →</span>
+          <span className="shrink-0 font-mono text-xs text-accent">View lifecycle →</span>
         </Link>
       )}
 
@@ -49,24 +49,24 @@ export default async function SystemProfile({ params }: { params: { id: string }
           {categoryLabel(m.category)}
         </span>
         <h1 className="mt-4 text-3xl font-bold tracking-tight">{m.name}</h1>
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-400">
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-600">
           <span className="font-medium">{m.actor}</span>
           {m.systemStatus && (
             <>
-              <span className="text-gray-600">·</span>
+              <span className="text-gray-400">·</span>
               <span className="font-mono text-xs uppercase text-gray-500">{m.systemStatus}</span>
             </>
           )}
           {m.subcategory && (
             <>
-              <span className="text-gray-600">·</span>
+              <span className="text-gray-400">·</span>
               <span>{m.subcategory}</span>
             </>
           )}
         </div>
       </div>
 
-      <p className="mt-6 leading-relaxed text-gray-200">{m.description}</p>
+      <p className="mt-6 leading-relaxed text-ink">{m.description}</p>
 
       {/* dates / details */}
       <section className="mt-10">
@@ -91,7 +91,7 @@ export default async function SystemProfile({ params }: { params: { id: string }
       {m.tags.length > 0 && (
         <div className="mt-6 flex flex-wrap gap-2">
           {m.tags.map((t) => (
-            <span key={t.id} className="rounded-full border border-edge bg-panel px-3 py-1 text-xs text-gray-300">
+            <span key={t.id} className="rounded-full border border-edge bg-panel px-3 py-1 text-xs text-gray-700">
               {t.name}
             </span>
           ))}

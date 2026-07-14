@@ -40,9 +40,9 @@ export function Timeline({ milestones }: { milestones: Milestone[] }) {
         const items = groups.get(year)!;
         return (
           <div key={year} className="relative mb-14 last:mb-8">
-            <div className="relative z-10 mb-6 -ml-[2.7rem] inline-flex items-center gap-2 rounded border border-edge bg-ink px-3 py-1 font-mono text-sm font-bold tracking-wide text-gray-100 shadow-lg shadow-black/80">
+            <div className="relative z-10 mb-6 -ml-[2.7rem] inline-flex items-center gap-2 rounded bg-ink px-3 py-1 font-mono text-sm font-bold tracking-wide text-white shadow-sm">
               <span>{year}</span>
-              <span className="text-xs font-normal text-gray-500">
+              <span className="text-xs font-normal text-white/70">
                 · {items.length} {items.length === 1 ? "entry" : "entries"}
               </span>
             </div>
@@ -50,7 +50,7 @@ export function Timeline({ milestones }: { milestones: Milestone[] }) {
               {items.map((entry) => (
                 <div
                   key={entry.id}
-                  className={`relative before:absolute before:-left-8 before:top-5 before:z-[5] before:h-2 before:w-2 before:-translate-x-[3px] before:rounded-full before:border-2 before:border-ink ${entry.kind === "program" ? "before:bg-indigo-400 before:shadow-[0_0_0_4px_rgba(99,102,241,0.15)]" : "before:bg-blue-400 before:shadow-[0_0_0_4px_rgba(59,130,246,0.15)]"}`}
+                  className={`relative before:absolute before:-left-8 before:top-5 before:z-[5] before:h-2 before:w-2 before:-translate-x-[3px] before:rounded-full before:border-2 before:border-paper ${entry.kind === "program" ? "before:bg-accent before:shadow-[0_0_0_4px_rgba(179,25,66,0.18)]" : "before:bg-blue-400 before:shadow-[0_0_0_4px_rgba(59,130,246,0.15)]"}`}
                 >
                   {entry.kind === "program" ? (
                     <ProgramCard program={entry.program} events={entry.events} />

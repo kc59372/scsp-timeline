@@ -78,7 +78,7 @@ export function MergeControl({
   }
 
   const input =
-    "rounded-md border border-edge bg-panel px-3 py-1.5 text-xs text-gray-100 outline-none focus:border-blue-500";
+    "rounded-md border border-edge bg-panel px-3 py-1.5 text-xs text-ink outline-none focus:border-accent";
 
   return (
     <div className="rounded-md border border-edge bg-panel/60 p-3">
@@ -92,14 +92,14 @@ export function MergeControl({
             type="button"
             onClick={() => setMode("existing")}
             disabled={programs.length === 0}
-            className={`px-2 py-1 ${mode === "existing" ? "bg-blue-600 text-white" : "text-gray-400"} disabled:opacity-40`}
+            className={`px-2 py-1 ${mode === "existing" ? "bg-accent text-white" : "text-gray-600"} disabled:opacity-40`}
           >
             Existing
           </button>
           <button
             type="button"
             onClick={() => setMode("new")}
-            className={`px-2 py-1 ${mode === "new" ? "bg-blue-600 text-white" : "text-gray-400"}`}
+            className={`px-2 py-1 ${mode === "new" ? "bg-accent text-white" : "text-gray-600"}`}
           >
             New
           </button>
@@ -142,7 +142,7 @@ export function MergeControl({
           type="button"
           onClick={merge}
           disabled={busy || disabled}
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-40"
+          className="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-dark disabled:opacity-40"
         >
           Merge
         </button>

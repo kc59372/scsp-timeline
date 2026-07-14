@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
 
 export const metadata: Metadata = {
   title: "US Military AI Adoption Timeline 2016–2026",
@@ -24,14 +22,12 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>
       <body className="font-sans antialiased">
-        <SiteHeader />
         {children}
-        <SiteFooter />
       </body>
     </html>
   );

@@ -37,8 +37,8 @@ export function FilterBar({ availableCategories, state, minYear, maxYear, onChan
               onClick={() => onChange({ ...state, category: active && p.key !== "all" ? "all" : p.key })}
               className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${
                 active
-                  ? "border-blue-500 bg-blue-500/15 text-gray-100"
-                  : "border-edge bg-panel text-gray-400 hover:border-gray-500 hover:bg-[#162032] hover:text-gray-100"
+                  ? "border-accent bg-accent/15 text-ink"
+                  : "border-edge bg-panel text-gray-600 hover:border-grey hover:bg-raise hover:text-ink"
               }`}
             >
               {p.label}

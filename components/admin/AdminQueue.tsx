@@ -54,7 +54,7 @@ export function AdminQueue({ items }: { items: Milestone[] }) {
 
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border border-edge bg-panel p-10 text-center text-sm text-gray-400">
+      <div className="rounded-lg border border-edge bg-panel p-10 text-center text-sm text-gray-600">
         No pending entries. The review queue is clear.
       </div>
     );
@@ -64,7 +64,7 @@ export function AdminQueue({ items }: { items: Milestone[] }) {
     <div>
       {/* bulk action bar */}
       <div className="mb-3 flex items-center gap-3">
-        <span className="text-sm text-gray-400">{selected.size} selected</span>
+        <span className="text-sm text-gray-600">{selected.size} selected</span>
         <button
           onClick={() => bulk("approve")}
           disabled={busy || selected.size === 0}
@@ -110,7 +110,7 @@ export function AdminQueue({ items }: { items: Milestone[] }) {
                 <td className="p-3">
                   <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggle(m.id)} />
                 </td>
-                <td className="p-3 font-medium text-gray-100">
+                <td className="p-3 font-medium text-ink">
                   {m.name}
                   {m.verifyReason && (
                     <span className="mt-1 block font-normal text-[0.7rem] italic text-gray-500" title={m.verifyReason}>
@@ -120,24 +120,24 @@ export function AdminQueue({ items }: { items: Milestone[] }) {
                 </td>
                 <td className="p-3 text-xs">
                   {m.program ? (
-                    <span className="rounded bg-indigo-500/10 px-2 py-0.5 text-indigo-300">{m.program.name}</span>
+                    <span className="rounded bg-accent/10 px-2 py-0.5 text-accent">{m.program.name}</span>
                   ) : (
-                    <span className="text-gray-600">— ungrouped</span>
+                    <span className="text-gray-400">— ungrouped</span>
                   )}
                 </td>
-                <td className="p-3 font-mono text-xs text-gray-400">{eventTypeLabel(m.eventType)}</td>
-                <td className="p-3 text-gray-400">{categoryLabel(m.category)}</td>
-                <td className="p-3 text-gray-400">{m.actor}</td>
+                <td className="p-3 font-mono text-xs text-gray-600">{eventTypeLabel(m.eventType)}</td>
+                <td className="p-3 text-gray-600">{categoryLabel(m.category)}</td>
+                <td className="p-3 text-gray-600">{m.actor}</td>
                 <td className="p-3 font-mono text-xs text-gray-500">
                   {formatMilestoneDate(m.eventDate) ?? formatMilestoneDate(m.devStartDate) ?? "—"}
                 </td>
                 <td className="p-3 text-xs">
                   {m.sourceUrl ? (
-                    <a href={m.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                    <a href={m.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
                       {m.sourceName ?? "source"}
                     </a>
                   ) : (
-                    <span className="text-gray-600">{m.sourceName ?? "—"}</span>
+                    <span className="text-gray-400">{m.sourceName ?? "—"}</span>
                   )}
                 </td>
                 <td className="p-3 font-mono text-xs text-gray-500">
@@ -145,9 +145,9 @@ export function AdminQueue({ items }: { items: Milestone[] }) {
                 </td>
                 <td className="p-3">
                   <div className="flex gap-2 whitespace-nowrap">
-                    <button onClick={() => review(m.id, "approve")} disabled={busy} className="text-xs font-semibold text-emerald-400 hover:underline disabled:opacity-40">Approve</button>
-                    <Link href={`/admin/${m.id}/edit`} className="text-xs font-semibold text-blue-400 hover:underline">Edit</Link>
-                    <button onClick={() => review(m.id, "reject")} disabled={busy} className="text-xs font-semibold text-rose-400 hover:underline disabled:opacity-40">Reject</button>
+                    <button onClick={() => review(m.id, "approve")} disabled={busy} className="text-xs font-semibold text-emerald-600 hover:underline disabled:opacity-40">Approve</button>
+                    <Link href={`/admin/${m.id}/edit`} className="text-xs font-semibold text-accent hover:underline">Edit</Link>
+                    <button onClick={() => review(m.id, "reject")} disabled={busy} className="text-xs font-semibold text-rose-600 hover:underline disabled:opacity-40">Reject</button>
                   </div>
                 </td>
               </tr>

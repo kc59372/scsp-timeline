@@ -83,7 +83,7 @@ export function EditForm({ milestone }: { milestone: Milestone }) {
     router.refresh();
   }
 
-  const input = "rounded-md border border-edge bg-panel px-3 py-2 text-sm text-gray-100 outline-none focus:border-blue-500";
+  const input = "rounded-md border border-edge bg-panel px-3 py-2 text-sm text-ink outline-none focus:border-accent";
   const labelCls = "font-mono text-[0.65rem] uppercase tracking-wide text-gray-500";
 
   return (
@@ -127,7 +127,7 @@ export function EditForm({ milestone }: { milestone: Milestone }) {
       <div className="grid gap-5 sm:grid-cols-3">
         <div className="flex flex-col gap-1">
           <span className={labelCls}>Program</span>
-          <div className="rounded-md border border-edge bg-panel/60 px-3 py-2 text-sm text-gray-300">
+          <div className="rounded-md border border-edge bg-panel/60 px-3 py-2 text-sm text-gray-700">
             {milestone.program ? (
               milestone.program.name
             ) : (
@@ -201,7 +201,7 @@ export function EditForm({ milestone }: { milestone: Milestone }) {
         <button
           type="button"
           onClick={() => setSources((arr) => [...arr, ""])}
-          className="self-start rounded-md border border-edge px-3 py-1.5 text-xs text-gray-300 hover:border-gray-500"
+          className="self-start rounded-md border border-edge px-3 py-1.5 text-xs text-gray-700 hover:border-gray-300"
         >
           + Add source
         </button>

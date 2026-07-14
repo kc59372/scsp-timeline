@@ -13,11 +13,11 @@ export default async function EditMilestone({ params }: { params: { id: string }
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <Link href="/admin" className="font-mono text-xs text-gray-500 hover:text-blue-400">
+      <Link href="/admin" className="font-mono text-xs text-gray-500 hover:text-accent">
         ← Back to queue
       </Link>
       <h1 className="mt-4 text-2xl font-bold">Edit Entry</h1>
-      <p className="mt-1 text-sm text-gray-400">
+      <p className="mt-1 text-sm text-gray-600">
         Status: <span className="font-mono uppercase">{milestone.entryStatus}</span> · review and
         correct fields before approving.
       </p>
