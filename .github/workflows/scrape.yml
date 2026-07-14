@@ -14,14 +14,14 @@ name: Scheduled Scrape
 # and are grouped into program lifecycles by the admin review queue.
 
 on:
-  # DAILY SCHEDULE PAUSED. The deployed app still runs pre-verifier ingest code
-  # that resets a re-ingested event's entryStatus back to PENDING, which would
-  # revert admin-approved entries on the next scrape. Re-enable the cron below
-  # only after redeploying the app with the ingest-verification code (which
-  # preserves entryStatus on re-ingest). Until then this workflow is manual-only.
-  # schedule:
-  #   - cron: "0 6 * * *" # daily at 06:00 UTC
-  workflow_dispatch: {} # manual runs only (from the Actions tab)
+  # WEEKLY SCHEDULE. Safe to run on a schedule now that the deployed app (main,
+  # commit 4af221f onward) preserves a re-ingested event's entryStatus instead
+  # of resetting it to PENDING — so a scrape no longer reverts admin approvals.
+  # Note: GitHub cron is UTC and does NOT observe daylight saving, so 13:00 UTC
+  # is 9am ET during EDT (Mar–Nov) and 8am ET during EST (Nov–Mar).
+  schedule:
+    - cron: "0 13 * * 5" # weekly, Fridays at 13:00 UTC (≈9am ET)
+  workflow_dispatch: {} # also allow manual runs (from the Actions tab)
 
 jobs:
   scrape:
