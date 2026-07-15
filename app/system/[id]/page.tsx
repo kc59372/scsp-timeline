@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fetchMilestone, type Milestone } from "@/lib/milestones";
-import { categoryStyle, categoryLabel } from "@/lib/categories";
+import { categoryLabel, pillStyle } from "@/lib/categories";
 import { eventTypeLabel } from "@/lib/events";
 import { formatMilestoneDate, formatUsd, displayName, displayActor, displayDescription } from "@/lib/format";
 
@@ -19,8 +19,6 @@ function Field({ label, value }: { label: string; value: string | null | undefin
 export default async function SystemProfile({ params }: { params: { id: string } }) {
   const m: Milestone | null = await fetchMilestone(params.id);
   if (!m) notFound();
-
-  const style = categoryStyle(m.category);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -45,7 +43,10 @@ export default async function SystemProfile({ params }: { params: { id: string }
       )}
 
       <div className="mt-6">
-        <span className={`rounded px-2.5 py-1 font-mono text-[0.7rem] font-semibold uppercase tracking-wide ${style.pill}`}>
+        <span
+          className="rounded border px-2.5 py-1 font-mono text-[0.7rem] font-semibold uppercase tracking-wide"
+          style={pillStyle(m.category)}
+        >
           {categoryLabel(m.category)}
         </span>
         <h1 className="mt-4 text-3xl font-bold tracking-tight">{displayName(m)}</h1>

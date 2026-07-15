@@ -376,7 +376,7 @@ and public-domain DoD sources. Each scraper emits normalized events (with an
 
 1. **Interactive Timeline** (`components/Timeline.tsx`):
    - Vertical scrollable timeline grouped by year (2016–2026)
-   - Color-coded by `Category` enum
+   - Color-coded by `Category` enum (palette: [docs/CATEGORY_COLORS.md](./docs/CATEGORY_COLORS.md); source of truth `lib/categories.ts`)
    - **Program lifecycle tracks** (`components/ProgramCard.tsx`): events belonging
      to a program render as one track (request → award → test → deployment),
      anchored at the program's earliest event; standalone events render as cards
@@ -629,3 +629,4 @@ Post-MVP                                                                ✅ Done
 - Congress.gov API: https://api.congress.gov/
 - Next.js App Router: https://nextjs.org/docs · Prisma: https://www.prisma.io/docs · NextAuth.js: https://next-auth.js.org
 - Runbooks: [DEPLOY.md](./DEPLOY.md) · [DEPLOY_WITH_CLAUDE.md](./DEPLOY_WITH_CLAUDE.md) · [scrapers/README.md](./scrapers/README.md)
+- Category color palette: [docs/CATEGORY_COLORS.md](./docs/CATEGORY_COLORS.md) (source of truth `lib/categories.ts`)

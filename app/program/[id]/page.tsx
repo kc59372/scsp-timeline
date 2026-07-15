@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fetchProgram } from "@/lib/milestones";
-import { categoryStyle, categoryLabel } from "@/lib/categories";
+import { categoryLabel, pillStyle, dotStyle, textStyle } from "@/lib/categories";
 import { eventTypeLabel } from "@/lib/events";
 import { orderEvents } from "@/lib/timeline";
 import { formatMilestoneDate, primaryDateIso, formatUsd, displayActor, displayDescription } from "@/lib/format";
@@ -10,7 +10,6 @@ export default async function ProgramProfile({ params }: { params: { id: string 
   const program = await fetchProgram(params.id);
   if (!program) notFound();
 
-  const style = categoryStyle(program.category);
   const events = orderEvents(program.events);
 
   const totalValue = events.reduce((sum, e) => sum + (e.contractValue ?? 0), 0);
@@ -23,7 +22,10 @@ export default async function ProgramProfile({ params }: { params: { id: string 
 
       <div className="mt-6">
         <div className="flex items-center gap-2">
-          <span className={`rounded px-2.5 py-1 font-mono text-[0.7rem] font-semibold uppercase tracking-wide ${style.pill}`}>
+          <span
+            className="rounded border px-2.5 py-1 font-mono text-[0.7rem] font-semibold uppercase tracking-wide"
+            style={pillStyle(program.category)}
+          >
             {categoryLabel(program.category)}
           </span>
           <span className="rounded bg-accent/10 px-2 py-0.5 font-mono text-[0.7rem] uppercase tracking-wide text-accent">
@@ -65,10 +67,10 @@ export default async function ProgramProfile({ params }: { params: { id: string 
         <ol className="relative flex flex-col gap-5 pl-6 before:absolute before:bottom-2 before:left-[3px] before:top-2 before:w-0.5 before:bg-edge">
           {events.map((e) => (
             <li key={e.id} className="relative">
-              <span className={`absolute -left-6 top-1.5 h-2.5 w-2.5 -translate-x-[3px] rounded-full border-2 border-paper ${style.dot}`} />
+              <span className="absolute -left-6 top-1.5 h-2.5 w-2.5 -translate-x-[3px] rounded-full border-2 border-paper" style={dotStyle(program.category)} />
               <div className="rounded-lg border border-edge bg-panel p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className={`font-mono text-[0.7rem] font-bold uppercase tracking-wide ${style.text}`}>
+                  <span className="font-mono text-[0.7rem] font-bold uppercase tracking-wide" style={textStyle(program.category)}>
                     {eventTypeLabel(e.eventType)}
                   </span>
                   <span className="font-mono text-xs text-gray-500">

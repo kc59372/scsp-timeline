@@ -1,6 +1,6 @@
 "use client";
 
-import { categoryLabel } from "@/lib/categories";
+import { categoryLabel, categoryColor, categoryFg } from "@/lib/categories";
 
 export interface FilterState {
   category: string | "all";
@@ -31,16 +31,35 @@ export function FilterBar({ availableCategories, state, minYear, maxYear, onChan
       <div className="flex flex-wrap gap-2">
         {pills.map((p) => {
           const active = state.category === p.key;
+          const isAll = p.key === "all";
+          const color = isAll ? null : categoryColor(p.key);
+
+          // Active pill: solid category fill (accent for "All"). Inactive pill:
+          // neutral chip with a category-colored dot so the color reads at a glance.
+          const style =
+            active && color
+              ? { backgroundColor: color, borderColor: color, color: categoryFg(p.key) }
+              : undefined;
+
           return (
             <button
               key={p.key}
-              onClick={() => onChange({ ...state, category: active && p.key !== "all" ? "all" : p.key })}
-              className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${
+              onClick={() => onChange({ ...state, category: active && !isAll ? "all" : p.key })}
+              style={style}
+              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all ${
                 active
-                  ? "border-accent bg-accent/15 text-ink"
+                  ? isAll
+                    ? "border-accent bg-accent/15 text-ink"
+                    : ""
                   : "border-edge bg-panel text-gray-600 hover:border-grey hover:bg-raise hover:text-ink"
               }`}
             >
+              {color && (
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: active ? categoryFg(p.key) : color }}
+                />
+              )}
               {p.label}
             </button>
           );
