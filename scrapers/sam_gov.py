@@ -25,6 +25,7 @@ from urllib import error as urlerror
 from urllib import parse as urlparse
 from urllib import request as urlrequest
 
+import programs  # curated program registry (matcher + focused query terms)
 import utils
 from programs import match_program  # curated cross-source program registry
 from rss import is_relevant_procurement  # stricter AI/autonomy gate for contracts
@@ -206,7 +207,8 @@ def _date_windows(posted_from: str, posted_to: str) -> list[tuple[str, str]]:
 
 
 def fetch_live(
-    api_key: str, posted_from: str, posted_to: str, limit: int, budget: RequestBudget
+    api_key: str, posted_from: str, posted_to: str, limit: int, budget: RequestBudget,
+    keywords: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Paginate the Opportunities API across all keywords and ≤1-year windows.
 
@@ -217,7 +219,7 @@ def fetch_live(
     collected: list[dict[str, Any]] = []
     windows = _date_windows(posted_from, posted_to)
     for win_from, win_to in windows:
-        for keyword in KEYWORDS:
+        for keyword in (keywords or KEYWORDS):
             offset = 0
             while len(collected) < limit:
                 if budget.exhausted():
@@ -295,7 +297,30 @@ def main() -> int:
             "unlimited (not recommended on a free key)."
         ),
     )
+    parser.add_argument(
+        "--program-focus", action="store_true",
+        help="Search the curated program names/aliases (programs.json) instead of the generic AI keywords.",
+    )
+    parser.add_argument(
+        "--keywords", default="",
+        help=(
+            "Comma-separated search phrases to use instead of the default AI keywords "
+            "(e.g. 'Replicator,Project Maven'). Overrides --program-focus."
+        ),
+    )
     args = parser.parse_args()
+
+    # Search-term selection: explicit --keywords wins, else the full curated
+    # registry with --program-focus, else the generic AI/autonomy keywords.
+    # NOTE: each keyword costs one search request PER ≤1-year window, so pairing
+    # many program names with a multi-year range burns the request budget on
+    # searches before any description fetch — prefer a narrow window here.
+    if args.keywords.strip():
+        keywords = [k.strip() for k in args.keywords.split(",") if k.strip()]
+    elif args.program_focus:
+        keywords = programs.program_query_terms()
+    else:
+        keywords = None
 
     # 0 means "no cap"; any positive value is a hard per-run request budget.
     budget = RequestBudget(None if args.max_requests == 0 else args.max_requests)
@@ -316,7 +341,7 @@ def main() -> int:
             print("ERROR: SAM_GOV_API_KEY not set (or use --fixtures).", file=sys.stderr)
             return 2
         try:
-            opportunities = fetch_live(api_key, posted_from, args.posted_to, args.limit, budget)
+            opportunities = fetch_live(api_key, posted_from, args.posted_to, args.limit, budget, keywords)
         except SamQuotaExceeded as e:
             print(f"[sam_gov] {e} during search — stopping with nothing fetched.", file=sys.stderr)
             opportunities = []
@@ -339,7 +364,11 @@ def main() -> int:
             break
         if not args.fixtures:
             utils.polite_sleep(0.5)  # throttle the notice-desc endpoint
-        if not is_relevant_procurement(f"{title} {description}"):
+        haystack = f"{title} {description}"
+        # A curated-program name is itself strong relevance (significance =
+        # known-project match), so keep program-named notices even if they lack a
+        # generic AI keyword; otherwise require the stricter AI/autonomy gate.
+        if not is_relevant_procurement(haystack) and not match_program(haystack):
             dropped += 1
             continue
         mapped.append(map_opportunity(op, description))
