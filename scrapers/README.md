@@ -30,7 +30,8 @@ can show a system progress from request → award → test → fielding → depl
 |---|---|---|
 | `sam_gov.py` | SAM.gov Opportunities API (`api.sam.gov`) — needs key | `AWARD` / `SOLICITATION` |
 | `usaspending_gov.py` | USAspending.gov award API (`api.usaspending.gov`) — **no key, historical to 2016** | `AWARD` |
-| `darpa_mil.py` | darpa.mil news (RSS) | `RD_START` (→ `TEST`) |
+| `darpa_archive.py` | darpa.mil news archive (`/json/news.json`) — **no key, historical to 2016**; in the backfill roster | `RD_START` (→ `TEST`) |
+| `darpa_mil.py` | darpa.mil news (RSS) — recent-only (~50 items); superseded by `darpa_archive.py` | `RD_START` (→ `TEST`) |
 | `af_mil.py` | af.mil news (RSS) | `FIELDING` |
 | `army_mil.py` | army.mil news (RSS) | `FIELDING` |
 | `navy_mil.py` | navy.mil news (RSS) — feed URL unverified (yields none) | `FIELDING` |
@@ -124,10 +125,22 @@ cannot reach 2016. Historical depth comes from the two **award APIs**:
   period-of-performance start dates predate the window and are dropped).
 - **`sam_gov.py`** — richer (solicitations + awards) but needs a free key.
 
-For historical **news / press releases** (pre-2026), `dvids_gov.py` uses the
-DVIDS API (official DoD public-domain media) — searchable back to 2016, unlike
-the recent-only RSS feeds. `sam_gov.py` chunks its date range into ≤1-year
-windows (the SAM API rejects longer ranges with HTTP 400).
+For historical **news / press releases** (pre-2026), two sources reach back to
+2016 where the recent-only RSS feeds cannot:
+
+- **`dvids_gov.py`** — the DVIDS API (official DoD public-domain media),
+  searchable back to 2016 (needs the free public key).
+- **`darpa_archive.py`** — DARPA is a Drupal 10 site that publishes its *entire*
+  news archive as a single public JSON document (`/json/news.json`, no key) —
+  the same data its React "news board" renders client-side. This reaches 2016
+  (and earlier), so it supersedes the recent-only RSS feed (`darpa_mil.py`) and
+  is the DARPA entry in `backfill.py`. It's an ~11 MB download; server-side
+  dedup makes daily re-runs cheap (re-ingesting is a no-op). For a one-time full
+  historical pull run it directly: `darpa_archive.py --since 2016-01-01
+  --until 2026-12-31 --limit 1000`.
+
+`sam_gov.py` chunks its date range into ≤1-year windows (the SAM API rejects
+longer ranges with HTTP 400).
 
 ### SAM.gov daily quota (important)
 
