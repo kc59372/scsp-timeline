@@ -118,21 +118,21 @@ export function AdoptionVelocityChart({ milestones }: { milestones: Milestone[] 
               {/* pop-out donut */}
               {isActive && c > 0 && (
                 <div
-                  className={`absolute bottom-[calc(100%+0.75rem)] z-20 ${anchor} w-72 rounded-lg border border-edge bg-panel p-4 shadow-xl shadow-black/10`}
+                  className={`absolute bottom-[calc(100%+0.75rem)] z-20 ${anchor} w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-edge bg-panel p-4 shadow-xl shadow-black/10`}
                 >
                   <div className="mb-2 font-mono text-[0.65rem] uppercase tracking-wide text-gray-500">
                     {y} · category share
                   </div>
                   <div className="flex items-center gap-3">
                     <CategoryDonut slices={slicesFor(y)} total={c} />
-                    <ul className="flex-1 space-y-1">
+                    <ul className="min-w-0 flex-1 space-y-1">
                       {slicesFor(y).map((s) => (
                         <li key={s.category} className="flex items-start gap-2 text-[0.7rem] text-gray-700">
                           <span
                             className="mt-[3px] h-2.5 w-2.5 shrink-0 rounded-sm"
                             style={{ backgroundColor: categoryColor(s.category) }}
                           />
-                          <span className="flex-1 leading-tight">{categoryLabel(s.category)}</span>
+                          <span className="min-w-0 flex-1 break-words leading-tight">{categoryLabel(s.category)}</span>
                           <span className="shrink-0 whitespace-nowrap font-mono font-semibold tabular-nums text-ink">
                             {s.count} · {Math.round((s.count / c) * 100)}%
                           </span>
