@@ -4,15 +4,18 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Milestone } from "@/lib/milestones";
 import { categoryStyle, categoryLabel } from "@/lib/categories";
-import { formatMilestoneDate, primaryDateIso, devCycle, formatUsd, displayName } from "@/lib/format";
+import { formatMilestoneDate, primaryDateIso, devCycle, formatUsd, displayName, displayActor, displayDescription } from "@/lib/format";
 
 /** Expandable timeline card. Ports legacy .timeline-card markup to Tailwind. */
 export function MilestoneCard({ milestone }: { milestone: Milestone }) {
   const [expanded, setExpanded] = useState(false);
   const style = categoryStyle(milestone.category);
-  const meter = devCycle(milestone);
+  // The dev-cycle meter is a system-maturity signal; it's meaningless for a
+  // policy/directive milestone, so suppress it there.
+  const meter = milestone.category === "POLICY_DIRECTIVE" ? null : devCycle(milestone);
   const dateLabel = formatMilestoneDate(primaryDateIso(milestone));
   const value = formatUsd(milestone.contractValue);
+  const description = displayDescription(milestone.description);
 
   return (
     <article
@@ -48,7 +51,7 @@ export function MilestoneCard({ milestone }: { milestone: Milestone }) {
 
       {/* meta */}
       <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-gray-600">
-        <span className="font-medium">{milestone.actor}</span>
+        <span className="font-medium">{displayActor(milestone.actor)}</span>
         {dateLabel && (
           <>
             <span className="text-gray-400">·</span>
@@ -58,7 +61,7 @@ export function MilestoneCard({ milestone }: { milestone: Milestone }) {
       </div>
 
       <p className="mb-5 text-sm leading-relaxed text-gray-600 line-clamp-3">
-        {milestone.description}
+        {description}
       </p>
 
       {/* footer */}
@@ -87,7 +90,7 @@ export function MilestoneCard({ milestone }: { milestone: Milestone }) {
       <div className={`grid transition-all duration-300 ${expanded ? "mt-4 grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
         <div className="overflow-hidden">
           <div className="border-t border-dashed border-edge pt-4">
-            <p className="text-sm leading-relaxed text-ink">{milestone.description}</p>
+            <p className="text-sm leading-relaxed text-ink">{description}</p>
           </div>
         </div>
       </div>

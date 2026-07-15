@@ -53,6 +53,7 @@ export interface Verdict {
   /** Machine-readable tag for the deciding rule (for logs / ingest summary). */
   method:
     | "registry-autoapprove"
+    | "framing-review"
     | "rule-relevant"
     | "llm-approve"
     | "llm-review"
@@ -127,6 +128,50 @@ const hasAny = (lower: string, words: string[]) => words.some((w) => hasWord(low
 export function isTangential(text: string): boolean {
   const t = text.toLowerCase();
   return hasAny(t, TANGENTIAL_CONTEXT) && !hasAny(t, ADOPTION_SIGNAL);
+}
+
+// ── Non-milestone framing (never auto-approve) ───────────────────────────────
+//
+// The timeline tracks AI/autonomy *adoption* milestones — deployment, fielding,
+// testing, and awards on real systems. Some scraped items instead cover a
+// visit, a media package (video/podcast), a ceremony, or a competition result.
+// Those are not milestones even when the article names a tracked program or
+// trips an AI keyword (e.g. a celebrity "visit" whose body happens to mention
+// "drone dominance"). An item whose FRAMING matches below never takes an
+// auto-approve fast path — not registry, not news — and drops to PENDING for a
+// human. We test the framing against the title/name, where this packaging
+// reliably lives; body text is exactly where the coincidental matches that
+// caused false auto-approvals occur. False positives are cheap here: a genuine
+// milestone merely gets reviewed instead of auto-approved.
+const NON_MILESTONE_PHRASES = [
+  // media / promotional packaging
+  "video:", "audio:", "watch:", "photos:", "gallery:", "b-roll", "photo essay",
+  "image gallery", "in photos", "livestream", "live stream", "voices from",
+  // celebrity / entertainment / morale
+  "star of", "meet-and-greet", "meet and greet",
+  // ceremonies / visits / tours / personnel recognition
+  "ribbon-cutting", "ribbon cutting", "change of command", "retirement ceremony",
+  "hall of fame", "distinguished visitor", "guest speaker", "award ceremony",
+  "commander's call", "town hall",
+  // competition RESULTS (the contest, not a fielded capability)
+  "challenge winners", "take top spots", "top spots", "announces winners",
+  "winners of",
+];
+const NON_MILESTONE_WORDS = [
+  "visits", "visit", "tours", "celebrates", "celebrating", "podcast", "episode",
+  "actor", "actress", "celebrity", "netflix", "hollywood", "autograph", "uso",
+  "graduation", "commencement",
+];
+
+/**
+ * True if an item's title reads as a visit / media package / ceremony /
+ * competition result rather than an adoption milestone. Used to withhold the
+ * auto-approve fast path (registry and news) and route the item to review.
+ */
+export function isNonMilestoneFraming(title: string): boolean {
+  const t = (title ?? "").toLowerCase();
+  if (NON_MILESTONE_PHRASES.some((p) => t.includes(p))) return true;
+  return hasAny(t, NON_MILESTONE_WORDS);
 }
 
 // ── Deterministic fallback triage (used when ANTHROPIC_API_KEY is unset) ──────
@@ -257,6 +302,7 @@ REJECT — do NOT include:
 - Items that name no specific technology, system, project, or concrete application — only broad "AI adoption / innovation / force design" talk.
 - Non-defense applications (e.g., environmental/forest work).
 - Items that do not actually involve AI or autonomy.
+- Media packages (VIDEO/AUDIO/podcast episodes, photo galleries), celebrity/entertainment or morale visits, ceremonies (ribbon-cutting, change of command, awards, hall of fame), tours, and "distinguished visitor" coverage — these report an event or media artifact, not the adoption of a capability, even when a real system is mentioned.
 Examples of REJECT:
 - "Meet the DARPA [X] Challenge teams" — a competition/hackathon about prize money.
 - "Into algorithms? You could win $50,000" — a prize challenge, no specific system.
@@ -378,10 +424,24 @@ export async function verifyEntry(input: VerifyInput): Promise<Verdict> {
   const haystack = `${input.name} ${input.description}`.trim();
   const program = matchProgram(haystack);
 
+  // A visit / media package / ceremony / competition result is not an adoption
+  // milestone, so it never auto-approves — not even a registry match (the fast
+  // path that previously waved a celebrity "visit" through on a coincidental
+  // body-text program match). Such items drop to PENDING for a human.
+  const framing = isNonMilestoneFraming(input.name);
+
   // Tier 1 — names a tracked program → auto-approve. A curated-registry match
   // is high-confidence on its own (the registry is hand-maintained), so these
-  // skip human review regardless of significance.
+  // skip human review regardless of significance — UNLESS the title reads as a
+  // non-milestone (visit/media/ceremony/competition), which goes to review.
   if (program) {
+    if (framing) {
+      return {
+        status: "PENDING",
+        method: "framing-review",
+        reason: `Matches tracked program "${program.name}" but the title reads as a visit/media/ceremony item — needs review`,
+      };
+    }
     return {
       status: "APPROVED",
       method: "registry-autoapprove",
@@ -403,6 +463,7 @@ export async function verifyEntry(input: VerifyInput): Promise<Verdict> {
   // News (DVIDS / service RSS): semantic 3-way triage. Auto-approve genuine
   // AI-adoption stories, queue peripheral ones, and reject
   // talk-only/competition/non-defense items — via the LLM when a key is set, or
-  // the deterministic fallback (this deployment) otherwise.
-  return classifyUnknown(input, haystack, /* allowApprove */ true);
+  // the deterministic fallback (this deployment) otherwise. Non-milestone
+  // framing withholds auto-approve (allowApprove = false) → at most PENDING.
+  return classifyUnknown(input, haystack, /* allowApprove */ !framing);
 }

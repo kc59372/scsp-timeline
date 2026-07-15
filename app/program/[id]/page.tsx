@@ -4,7 +4,7 @@ import { fetchProgram } from "@/lib/milestones";
 import { categoryStyle, categoryLabel } from "@/lib/categories";
 import { eventTypeLabel } from "@/lib/events";
 import { orderEvents } from "@/lib/timeline";
-import { formatMilestoneDate, primaryDateIso, formatUsd } from "@/lib/format";
+import { formatMilestoneDate, primaryDateIso, formatUsd, displayActor, displayDescription } from "@/lib/format";
 
 export default async function ProgramProfile({ params }: { params: { id: string } }) {
   const program = await fetchProgram(params.id);
@@ -32,7 +32,7 @@ export default async function ProgramProfile({ params }: { params: { id: string 
         </div>
         <h1 className="mt-4 text-3xl font-bold tracking-tight">{program.name}</h1>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-600">
-          <span className="font-medium">{program.actor}</span>
+          <span className="font-medium">{displayActor(program.actor)}</span>
           {program.systemStatus && (
             <>
               <span className="text-gray-400">·</span>
@@ -48,7 +48,9 @@ export default async function ProgramProfile({ params }: { params: { id: string 
         </div>
       </div>
 
-      {program.description && <p className="mt-6 leading-relaxed text-ink">{program.description}</p>}
+      {program.description && (
+        <p className="mt-6 leading-relaxed text-ink">{displayDescription(program.description)}</p>
+      )}
 
       {/* lifecycle track */}
       <section className="mt-10">
@@ -78,7 +80,9 @@ export default async function ProgramProfile({ params }: { params: { id: string 
                     {e.name}
                   </Link>
                 </h3>
-                {e.description && <p className="mt-2 text-sm leading-relaxed text-gray-600">{e.description}</p>}
+                {e.description && (
+                  <p className="mt-2 text-sm leading-relaxed text-gray-600">{displayDescription(e.description)}</p>
+                )}
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[0.7rem] text-gray-500">
                   {e.contractNumber && <span>Contract {e.contractNumber}</span>}
                   {e.contractValue != null && <span>{formatUsd(e.contractValue)}</span>}

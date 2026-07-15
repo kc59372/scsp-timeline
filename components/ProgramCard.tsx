@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { Milestone, Program } from "@/lib/milestones";
 import { categoryStyle, categoryLabel } from "@/lib/categories";
 import { eventTypeLabel } from "@/lib/events";
-import { formatMilestoneDate, primaryDateIso, formatUsd } from "@/lib/format";
+import { formatMilestoneDate, primaryDateIso, formatUsd, displayActor } from "@/lib/format";
 
 /**
  * A program rendered as a lifecycle track: request → award → test → deployment.
@@ -47,7 +47,7 @@ export function ProgramCard({ program, events }: { program: Program; events: Mil
       </h3>
 
       <div className="mb-5 flex flex-wrap items-center gap-3 text-sm text-gray-600">
-        <span className="font-medium">{program.actor}</span>
+        <span className="font-medium">{displayActor(program.actor)}</span>
         {span && (
           <>
             <span className="text-gray-400">·</span>

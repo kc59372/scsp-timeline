@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { fetchMilestone, type Milestone } from "@/lib/milestones";
 import { categoryStyle, categoryLabel } from "@/lib/categories";
 import { eventTypeLabel } from "@/lib/events";
-import { formatMilestoneDate, formatUsd, displayName } from "@/lib/format";
+import { formatMilestoneDate, formatUsd, displayName, displayActor, displayDescription } from "@/lib/format";
 
 /** One row in the dates/details grid; renders nothing if value is empty. */
 function Field({ label, value }: { label: string; value: string | null | undefined }) {
@@ -50,7 +50,7 @@ export default async function SystemProfile({ params }: { params: { id: string }
         </span>
         <h1 className="mt-4 text-3xl font-bold tracking-tight">{displayName(m)}</h1>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-600">
-          <span className="font-medium">{m.actor}</span>
+          <span className="font-medium">{displayActor(m.actor)}</span>
           {m.systemStatus && (
             <>
               <span className="text-gray-400">·</span>
@@ -66,7 +66,7 @@ export default async function SystemProfile({ params }: { params: { id: string }
         </div>
       </div>
 
-      <p className="mt-6 leading-relaxed text-ink">{m.description}</p>
+      <p className="mt-6 leading-relaxed text-ink">{displayDescription(m.description)}</p>
 
       {/* dates / details */}
       <section className="mt-10">
