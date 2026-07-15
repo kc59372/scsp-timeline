@@ -3,13 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Milestone } from "@/lib/milestones";
-import { categoryStyle, categoryLabel } from "@/lib/categories";
+import { categoryColor, categoryLabel, pillStyle, textStyle } from "@/lib/categories";
 import { formatMilestoneDate, primaryDateIso, devCycle, formatUsd, displayName, displayActor, displayDescription } from "@/lib/format";
 
 /** Expandable timeline card. Ports legacy .timeline-card markup to Tailwind. */
 export function MilestoneCard({ milestone }: { milestone: Milestone }) {
   const [expanded, setExpanded] = useState(false);
-  const style = categoryStyle(milestone.category);
+  const color = categoryColor(milestone.category);
   // The dev-cycle meter is a system-maturity signal; it's meaningless for a
   // policy/directive milestone, so suppress it there.
   const meter = milestone.category === "POLICY_DIRECTIVE" ? null : devCycle(milestone);
@@ -20,11 +20,12 @@ export function MilestoneCard({ milestone }: { milestone: Milestone }) {
   return (
     <article
       onClick={() => setExpanded((v) => !v)}
+      style={{ borderLeftColor: color, borderLeftWidth: "4px" }}
       className="group cursor-pointer overflow-hidden rounded-lg border border-edge bg-panel p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:bg-raise hover:shadow-lg hover:shadow-black/5"
     >
       {/* pre-header */}
       <div className="mb-2 flex items-center justify-between">
-        <span className={`font-mono text-[0.7rem] font-bold uppercase tracking-[0.1em] ${style.text}`}>
+        <span className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.1em]" style={textStyle(milestone.category)}>
           {categoryLabel(milestone.category)}
         </span>
         <span className="flex items-center gap-1 font-mono text-xs text-gray-500 transition-colors group-hover:text-accent">
@@ -66,7 +67,10 @@ export function MilestoneCard({ milestone }: { milestone: Milestone }) {
 
       {/* footer */}
       <div className="mt-4 flex items-center justify-between border-t border-edge pt-4">
-        <span className={`rounded px-2.5 py-1 font-mono text-[0.7rem] font-semibold uppercase tracking-wide ${style.pill}`}>
+        <span
+          className="rounded border px-2.5 py-1 font-mono text-[0.7rem] font-semibold uppercase tracking-wide"
+          style={pillStyle(milestone.category)}
+        >
           {categoryLabel(milestone.category)}
         </span>
         {value ? (

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Milestone, Program } from "@/lib/milestones";
-import { categoryStyle, categoryLabel } from "@/lib/categories";
+import { categoryColor, categoryLabel, dotStyle, textStyle } from "@/lib/categories";
 import { eventTypeLabel } from "@/lib/events";
 import { formatMilestoneDate, primaryDateIso, formatUsd, displayActor } from "@/lib/format";
 
@@ -11,7 +11,7 @@ import { formatMilestoneDate, primaryDateIso, formatUsd, displayActor } from "@/
  * Each stage links to its event's profile; the title links to the program page.
  */
 export function ProgramCard({ program, events }: { program: Program; events: Milestone[] }) {
-  const style = categoryStyle(program.category);
+  const color = categoryColor(program.category);
 
   const years = events
     .map((e) => primaryDateIso(e))
@@ -27,10 +27,13 @@ export function ProgramCard({ program, events }: { program: Program; events: Mil
   const totalValue = events.reduce((sum, e) => sum + (e.contractValue ?? 0), 0);
 
   return (
-    <article className="overflow-hidden rounded-lg border border-edge bg-panel p-6 transition-all duration-200 hover:border-accent/40 hover:bg-raise">
+    <article
+      style={{ borderLeftColor: color, borderLeftWidth: "4px" }}
+      className="overflow-hidden rounded-lg border border-edge bg-panel p-6 transition-all duration-200 hover:border-accent/40 hover:bg-raise"
+    >
       {/* pre-header */}
       <div className="mb-2 flex items-center justify-between">
-        <span className={`font-mono text-[0.7rem] font-bold uppercase tracking-[0.1em] ${style.text}`}>
+        <span className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.1em]" style={textStyle(program.category)}>
           {categoryLabel(program.category)}
         </span>
         <span className="flex items-center gap-2 font-mono text-[0.65rem] uppercase tracking-wide text-gray-500">
@@ -69,7 +72,7 @@ export function ProgramCard({ program, events }: { program: Program; events: Mil
               className="group flex min-w-[8.5rem] flex-col gap-1 rounded-md border border-edge bg-mist px-3 py-2 hover:border-accent/50"
             >
               <span className="flex items-center gap-1.5">
-                <span className={`h-2 w-2 shrink-0 rounded-full ${style.dot}`} />
+                <span className="h-2 w-2 shrink-0 rounded-full" style={dotStyle(program.category)} />
                 <span className="font-mono text-[0.65rem] font-semibold uppercase tracking-wide text-gray-700 group-hover:text-accent">
                   {eventTypeLabel(e.eventType)}
                 </span>
