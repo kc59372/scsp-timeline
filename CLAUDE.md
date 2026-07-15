@@ -454,6 +454,16 @@ and public-domain DoD sources. Each scraper emits normalized events (with an
      - **Registry match (any source) → `APPROVED`:** the item names a curated
        program (`scrapers/programs.json`). A hand-maintained registry hit is
        high-confidence on its own — fast path, no LLM.
+     - **Non-milestone framing gate (overrides every auto-approve):** an item
+       whose *title* reads as a visit, media package (VIDEO/AUDIO/podcast),
+       ceremony (ribbon-cutting, change of command, awards, hall of fame), tour,
+       or competition result is **not** an adoption milestone — the timeline
+       tracks deployment/testing/award events — so it never auto-approves, not
+       even on a registry match (which previously waved a celebrity "visit"
+       through on a coincidental body-text program mention). Such items drop to
+       `PENDING` (`isNonMilestoneFraming` in `lib/verify.ts`; withholds the
+       registry and news auto-approve paths). Descriptions are also stripped of
+       HTML/links and decoded (`lib/clean.ts`) on ingest.
      - **Procurement awards (SAM.gov / USAspending)** stay on the cheap keyword
        path: AI/autonomy keyword relevance → `PENDING`; otherwise the LLM
        decides `PENDING` vs `REJECTED`. Contracts never LLM-auto-approve (they

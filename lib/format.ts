@@ -3,6 +3,41 @@
  * and the dev-cycle meter (ported from legacy/app.js computeDevelopmentMeter).
  */
 import type { Milestone } from "./milestones";
+import { cleanText } from "./clean";
+
+// Scraped items carry the *feed* name in `actor` (e.g. "af.mil News",
+// "DoD News (defense.gov)", "DVIDS (Army)"). On a policymaker-facing card we
+// want the plain owning organization instead. Exact feed labels map here;
+// "DVIDS (X)" is handled by pattern; everything else (real awardee/org names on
+// procurement events) passes through untouched.
+const ACTOR_LABELS: Record<string, string> = {
+  "af.mil News": "Air Force",
+  "DoD News (defense.gov)": "DoD",
+  "DARPA News": "DARPA",
+  "Space Force News": "Space Force",
+};
+
+const DVIDS_BRANCH: Record<string, string> = {
+  "air force": "Air Force",
+  army: "Army",
+  navy: "Navy",
+  marines: "Marines",
+  "space force": "Space Force",
+  joint: "Joint Force",
+};
+
+/** Clean owning-organization label for a milestone's `actor` (feed → org). */
+export function displayActor(actor: string | null | undefined): string {
+  const a = (actor ?? "").trim();
+  if (!a) return "";
+  if (ACTOR_LABELS[a]) return ACTOR_LABELS[a];
+  const dvids = a.match(/^DVIDS\s*\(([^)]+)\)$/i);
+  if (dvids) {
+    const branch = dvids[1].trim();
+    return DVIDS_BRANCH[branch.toLowerCase()] ?? branch;
+  }
+  return a;
+}
 
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -122,7 +157,12 @@ export function contractTitle(name: string): string {
  */
 export function displayName(m: Milestone): string {
   if (m.category === "PROCUREMENT_CONTRACT") return contractTitle(m.name);
-  return m.name;
+  return cleanText(m.name) || m.name;
+}
+
+/** Description with all HTML/links stripped and entities decoded, for display. */
+export function displayDescription(text: string | null | undefined): string {
+  return cleanText(text);
 }
 
 /** "$1.4B" / "$99.0M" / "$14.78M" style for contract values (raw USD in). */

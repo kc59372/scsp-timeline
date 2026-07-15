@@ -21,6 +21,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import re
 import sys
@@ -39,9 +40,9 @@ DEFAULT_EVENT_TYPE = "RD_START"
 _TAG_RE = re.compile(r"<[^>]+>")
 
 
-def _text(html: str) -> str:
-    """Strip HTML tags → collapsed plain text."""
-    return " ".join(_TAG_RE.sub(" ", html or "").split())
+def _text(markup: str) -> str:
+    """Strip HTML tags + decode entities (&rsquo;, &ndash;…) → plain text."""
+    return " ".join(html.unescape(_TAG_RE.sub(" ", markup or "")).split())
 
 
 def map_record(r: dict[str, Any]) -> dict[str, Any] | None:

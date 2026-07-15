@@ -13,6 +13,7 @@
  */
 import { createHash } from "crypto";
 import { Prisma, Category, Country, SystemStatus, EventType } from "@prisma/client";
+import { cleanText } from "./clean";
 
 const CATEGORY_VALUES = new Set(Object.values(Category));
 const COUNTRY_VALUES = new Set(Object.values(Country));
@@ -205,7 +206,9 @@ export function normalizeMilestone(raw: RawMilestone): NormalizeResult {
 
     const data: Prisma.MilestoneCreateInput = {
       name,
-      description: str(raw.description) ?? "",
+      // Strip HTML/links + decode entities so no <img>/<a>/&rsquo; ever reaches
+      // the DB or a card. Applied here so every scraper is covered at one point.
+      description: cleanText(str(raw.description)),
       actor,
       country: countryRaw as Country,
       category,
