@@ -10,7 +10,7 @@ Sources (all official .mil/.gov — no commercial news):
   sam_gov      SAM.gov contracts (solicitations + awards)   → recent window, quota-capped (needs key)
   usaspending_gov  USAspending.gov DoD AI contract awards   → 2016→present (no key)
   dvids_gov    DVIDS DoD news / press releases              → 2016→present (needs key)
-  darpa_mil    DARPA programs / news                         → RD_START, TEST
+  darpa_archive DARPA news archive (/json/news.json)         → 2016→present (no key)
   af_mil       af.mil news                                   → fielding/deploy
   army_mil     army.mil news                                 → fielding/deploy
   navy_mil     navy.mil news                                 → fielding/deploy
@@ -42,7 +42,10 @@ ROSTER: list[tuple[str, list[str]]] = [
     ("sam_gov.py", ["--recent-days", "30", "--max-requests", "8"]),
     ("usaspending_gov.py", ["--since", "01/01/2016"]),
     ("dvids_gov.py", ["--since", "2016-01-01", "--limit", "500"]),
-    ("darpa_mil.py", []),
+    # DARPA's full news archive (/json/news.json) reaches 2016, unlike the
+    # recent-only RSS feed (darpa_mil.py) it supersedes; --limit 500 covers the
+    # whole AI/autonomy-relevant set. Overrides backfill's global --limit here.
+    ("darpa_archive.py", ["--since", "2016-01-01", "--limit", "500"]),
     ("af_mil.py", []),
     ("army_mil.py", []),
     ("navy_mil.py", []),
