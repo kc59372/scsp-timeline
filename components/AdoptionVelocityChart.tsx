@@ -67,7 +67,15 @@ function CategoryDonut({ slices, total }: { slices: Slice[]; total: number }) {
 export function AdoptionVelocityChart({ milestones }: { milestones: Milestone[] }) {
   const [hoverYear, setHoverYear] = useState<number | null>(null);
   const [pinnedYear, setPinnedYear] = useState<number | null>(null);
+  // The popover normally pops above the bar; when the chart sits near the top of
+  // the page there isn't room, so flip it below. Decided per-hover from the bar's
+  // distance to the top of the viewport (POPOVER_EST ≈ tall-popover height).
+  const [place, setPlace] = useState<"above" | "below">("above");
   const activeYear = hoverYear ?? pinnedYear;
+
+  const POPOVER_EST = 340;
+  const decidePlace = (el: HTMLElement) =>
+    setPlace(el.getBoundingClientRect().top < POPOVER_EST ? "below" : "above");
 
   const years = Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, i) => START_YEAR + i);
   const counts = new Map<number, number>(years.map((y) => [y, 0]));
@@ -112,13 +120,18 @@ export function AdoptionVelocityChart({ milestones }: { milestones: Milestone[] 
             <div
               key={y}
               className="relative flex flex-1 flex-col items-center gap-1"
-              onMouseEnter={() => setHoverYear(y)}
+              onMouseEnter={(e) => {
+                decidePlace(e.currentTarget);
+                setHoverYear(y);
+              }}
               onMouseLeave={() => setHoverYear(null)}
             >
               {/* pop-out donut */}
               {isActive && c > 0 && (
                 <div
-                  className={`absolute bottom-[calc(100%+0.75rem)] z-20 ${anchor} w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-edge bg-panel p-4 shadow-xl shadow-black/10`}
+                  className={`absolute z-20 ${
+                    place === "above" ? "bottom-[calc(100%+0.75rem)]" : "top-[calc(100%+0.75rem)]"
+                  } ${anchor} w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-edge bg-panel p-4 shadow-xl shadow-black/10`}
                 >
                   <div className="mb-2 font-mono text-[0.65rem] uppercase tracking-wide text-gray-500">
                     {y} · category share
