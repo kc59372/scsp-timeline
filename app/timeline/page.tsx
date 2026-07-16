@@ -9,7 +9,7 @@ export default async function TimelinePage() {
   const { items, total } = await fetchMilestones();
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-12">
+    <main className="mx-auto max-w-6xl px-6 py-12">
       {/* hero */}
       <p className="font-mono text-xs uppercase tracking-[0.2em] text-signal">
         US Military AI Adoption · 2016–2026
