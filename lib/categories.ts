@@ -22,16 +22,30 @@ export const CATEGORY_STYLES: Record<string, CategoryStyle> = {
   ISR: { label: "ISR", color: "#0F7173" },
   LOGISTICS_SUSTAINMENT: { label: "Logistics & Sustainment", color: "#DA7447" },
   MEDICAL: { label: "Medical", color: "#2F7D5F" },
-  POLICY_DIRECTIVE: { label: "Policy / Directive", color: "#7B7B7B" },
+  POLICY_DIRECTIVE: { label: "Policy / Directive", color: "#877A6B" },
   RESEARCH_DEVELOPMENT: { label: "Research & Development", color: "#B5527D" },
   SPACE: { label: "Space", color: "#8397D2" },
   TARGETING: { label: "Targeting", color: "#A6392E" },
   TRAINING_SIMULATION: { label: "Training & Simulation", color: "#B07D2B" },
   UNMANNED_SYSTEMS: { label: "Unmanned Systems", color: "#4A6C8C" },
-  // Catch-all bucket — a warm taupe kept visually distinct from the cool policy
-  // grey (#7B7B7B) and the blues so the legend reads cleanly.
-  OTHER: { label: "Other", color: "#877A6B" },
+  // Catch-all bucket — inherits the olive/forest green the retired
+  // PROCUREMENT_CONTRACT category used to carry.
+  OTHER: { label: "Other", color: "#436829" },
 };
+
+/**
+ * Canonical display order for categories (filter pills, legends). Matches the
+ * key order of CATEGORY_STYLES above, which intentionally keeps OTHER last so
+ * the catch-all sorts after the real mission domains.
+ */
+export const CATEGORY_ORDER: string[] = Object.keys(CATEGORY_STYLES);
+
+/** Sort comparator honoring CATEGORY_ORDER; unknown categories sort to the end. */
+export function compareCategories(a: string, b: string): number {
+  const ia = CATEGORY_ORDER.indexOf(a);
+  const ib = CATEGORY_ORDER.indexOf(b);
+  return (ia === -1 ? Infinity : ia) - (ib === -1 ? Infinity : ib);
+}
 
 const FALLBACK: CategoryStyle = { label: "Other", color: "#7B7B7B" };
 
