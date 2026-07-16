@@ -104,9 +104,14 @@ data; pass `?force=true` only to intentionally re-seed a fresh DB.
 
 ## Updating later
 
-Push to `main` → Vercel auto-deploys. New Prisma migrations must be applied
-against Neon with `npx prisma migrate deploy` (step 2's export + that one command)
-— Vercel's build does not run migrations. Seed is never re-run.
+Push to `main` → Vercel auto-deploys. **Production** builds run
+`npx prisma migrate deploy` automatically — the build script gates it on
+`VERCEL_ENV=production` via `scripts/migrate-if-prod.sh`, so committed migrations
+apply on the production deploy. **Preview** (branch/PR) builds skip migrations
+and therefore need no DB credentials (DB env vars stay Production-scoped); a
+preview must never apply its branch's migrations to the shared prod DB. If you
+prefer to apply a migration by hand instead, use `npx prisma migrate deploy`
+(step 2's export + that one command). Seed is never re-run.
 
 ## Give your team
 
