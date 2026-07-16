@@ -1,4 +1,5 @@
 import { SiteSidebar } from "@/components/SiteSidebar";
+import { SiteHeader } from "@/components/SiteHeader";
 
 export const metadata = {
   title: "Comparison Tool — US Military AI Adoption",
@@ -6,7 +7,9 @@ export const metadata = {
 
 export default function ComparePage() {
   return (
-    <main className="mx-auto flex max-w-7xl flex-col gap-10 px-6 py-12 lg:flex-row lg:items-start lg:gap-12">
+    <>
+      <SiteHeader />
+      <main className="mx-auto flex max-w-7xl flex-col gap-10 px-6 py-12 lg:flex-row lg:items-start lg:gap-12">
       {/* ── Persistent site sidebar ── */}
       <SiteSidebar />
 
@@ -25,6 +28,7 @@ export default function ComparePage() {
           </p>
         </div>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

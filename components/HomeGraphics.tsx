@@ -4,20 +4,24 @@ import { useMemo, useState } from "react";
 import type { Milestone } from "@/lib/milestones";
 import { primaryYear } from "@/lib/format";
 import { categoryColor, categoryLabel, compareCategories } from "@/lib/categories";
+import { AdoptionVelocityChart } from "./AdoptionVelocityChart";
 
 const START_YEAR = 2016;
 const END_YEAR = 2026;
 
 /**
- * Homepage graphics: a line-chart view of milestones-per-year (the line version
- * of the timeline's velocity bars) alongside an overall category-share donut for
- * the entire dataset. Both recompute from whatever set they're handed.
+ * Homepage graphics: the adoption-velocity bar chart on top (full width), with
+ * the line-chart view of the same trend and an overall category-share donut for
+ * the entire dataset underneath. All recompute from whatever set they're handed.
  */
 export function HomeGraphics({ milestones }: { milestones: Milestone[] }) {
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-      <VelocityLineChart milestones={milestones} />
-      <CategoryShareDonut milestones={milestones} />
+    <div className="flex flex-col gap-6">
+      <AdoptionVelocityChart milestones={milestones} />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <VelocityLineChart milestones={milestones} />
+        <CategoryShareDonut milestones={milestones} />
+      </div>
     </div>
   );
 }

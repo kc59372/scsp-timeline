@@ -38,11 +38,9 @@ function haystack(m: Milestone): string {
 
 export function TimelineExplorer({
   initialData,
-  total,
   initialSearch = "",
 }: {
   initialData: Milestone[];
-  total?: number;
   initialSearch?: string;
 }) {
   const [state, setState] = useState<FilterState>({
@@ -80,7 +78,6 @@ export function TimelineExplorer({
   return (
     <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-12">
       <SiteSidebar
-        total={total}
         search={state.search}
         onSearchChange={(v) => setState((s) => ({ ...s, search: v }))}
       />
