@@ -3,6 +3,7 @@
 import { categoryLabel, categoryColor, categoryFg } from "@/lib/categories";
 
 export interface FilterState {
+  search: string;
   category: string | "all";
   fromYear: number;
   toYear: number;
@@ -13,18 +14,63 @@ interface Props {
   state: FilterState;
   minYear: number;
   maxYear: number;
+  resultCount: number;
   onChange: (next: FilterState) => void;
 }
 
-/** Category pills + a 2016–2026 year-range control. */
-export function FilterBar({ availableCategories, state, minYear, maxYear, onChange }: Props) {
+/** Search box + category pills + a 2016–2026 year-range control (sidebar). */
+export function FilterBar({ availableCategories, state, minYear, maxYear, resultCount, onChange }: Props) {
   const pills: { key: string; label: string }[] = [
     { key: "all", label: "All Programs" },
     ...availableCategories.map((c) => ({ key: c, label: categoryLabel(c) })),
   ];
 
   return (
-    <section className="my-8">
+    <section className="space-y-6">
+      <div>
+        <label
+          htmlFor="timeline-search"
+          className="mb-3 block font-mono text-xs uppercase tracking-[0.1em] text-gray-500"
+        >
+          Search
+        </label>
+        <div className="relative">
+          <svg
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            aria-hidden="true"
+          >
+            <circle cx="9" cy="9" r="6" />
+            <path d="m14 14 3.5 3.5" strokeLinecap="round" />
+          </svg>
+          <input
+            id="timeline-search"
+            type="search"
+            value={state.search}
+            onChange={(e) => onChange({ ...state, search: e.target.value })}
+            placeholder="Name, org, contract…"
+            className="w-full rounded-lg border border-edge bg-panel py-2 pl-9 pr-8 text-sm text-ink placeholder:text-gray-500 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+          {state.search && (
+            <button
+              type="button"
+              onClick={() => onChange({ ...state, search: "" })}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-500 hover:bg-raise hover:text-ink"
+            >
+              ×
+            </button>
+          )}
+        </div>
+        <div className="mt-2 font-mono text-[0.65rem] text-gray-500">
+          {resultCount} {resultCount === 1 ? "match" : "matches"}
+        </div>
+      </div>
+
+      <div>
       <div className="mb-3 font-mono text-xs uppercase tracking-[0.1em] text-gray-500">
         Filter by Category
       </div>
@@ -65,8 +111,9 @@ export function FilterBar({ availableCategories, state, minYear, maxYear, onChan
           );
         })}
       </div>
+      </div>
 
-      <div className="mt-6">
+      <div>
         <div className="mb-3 flex items-center justify-between font-mono text-xs uppercase tracking-[0.1em] text-gray-500">
           <span>Year Range</span>
           <span className="text-signal">{state.fromYear} – {state.toYear}</span>
