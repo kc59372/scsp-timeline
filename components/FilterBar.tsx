@@ -25,6 +25,10 @@ export function FilterBar({ availableCategories, state, minYear, maxYear, result
     ...availableCategories.map((c) => ({ key: c, label: categoryLabel(c) })),
   ];
 
+  // Position (0–100%) of a year along the min→max track, for the range fill.
+  const pct = (year: number) =>
+    maxYear === minYear ? 0 : ((year - minYear) / (maxYear - minYear)) * 100;
+
   return (
     <section className="space-y-6">
       <div>
@@ -118,35 +122,43 @@ export function FilterBar({ availableCategories, state, minYear, maxYear, result
           <span>Year Range</span>
           <span className="text-signal">{state.fromYear} – {state.toYear}</span>
         </div>
-        <div className="flex items-center gap-4">
-          <label className="flex flex-1 items-center gap-2">
-            <span className="font-mono text-[0.65rem] text-gray-500">From</span>
-            <input
-              type="range"
-              min={minYear}
-              max={maxYear}
-              value={state.fromYear}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                onChange({ ...state, fromYear: Math.min(v, state.toYear) });
-              }}
-              className="w-full accent-blue-500"
-            />
-          </label>
-          <label className="flex flex-1 items-center gap-2">
-            <span className="font-mono text-[0.65rem] text-gray-500">To</span>
-            <input
-              type="range"
-              min={minYear}
-              max={maxYear}
-              value={state.toYear}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                onChange({ ...state, toYear: Math.max(v, state.fromYear) });
-              }}
-              className="w-full accent-blue-500"
-            />
-          </label>
+        {/* Single track, two draggable handles. The fill highlights the span. */}
+        <div className="range-slider">
+          <div className="rs-track" />
+          <div
+            className="rs-fill"
+            style={{ left: `${pct(state.fromYear)}%`, right: `${100 - pct(state.toYear)}%` }}
+          />
+          <input
+            type="range"
+            min={minYear}
+            max={maxYear}
+            value={state.fromYear}
+            aria-label="From year"
+            // Keep the lower handle reachable when both sit at the top end.
+            style={{ zIndex: state.fromYear >= maxYear ? 5 : 3 }}
+            onChange={(e) => {
+              const v = Math.min(Number(e.target.value), state.toYear);
+              onChange({ ...state, fromYear: v });
+            }}
+          />
+          <input
+            type="range"
+            min={minYear}
+            max={maxYear}
+            value={state.toYear}
+            aria-label="To year"
+            // Keep the upper handle reachable when both sit at the bottom end.
+            style={{ zIndex: state.toYear <= minYear ? 5 : 4 }}
+            onChange={(e) => {
+              const v = Math.max(Number(e.target.value), state.fromYear);
+              onChange({ ...state, toYear: v });
+            }}
+          />
+        </div>
+        <div className="mt-1 flex justify-between font-mono text-[0.6rem] text-gray-400">
+          <span>{minYear}</span>
+          <span>{maxYear}</span>
         </div>
       </div>
     </section>

@@ -7,6 +7,7 @@ import { primaryYear } from "@/lib/format";
 import { FilterBar, type FilterState } from "./FilterBar";
 import { AdoptionVelocityChart } from "./AdoptionVelocityChart";
 import { Timeline } from "./Timeline";
+import { SiteSidebar } from "./SiteSidebar";
 
 const MIN_YEAR = 2016;
 const MAX_YEAR = 2026;
@@ -35,9 +36,17 @@ function haystack(m: Milestone): string {
     .toLowerCase();
 }
 
-export function TimelineExplorer({ initialData }: { initialData: Milestone[] }) {
+export function TimelineExplorer({
+  initialData,
+  total,
+  initialSearch = "",
+}: {
+  initialData: Milestone[];
+  total?: number;
+  initialSearch?: string;
+}) {
   const [state, setState] = useState<FilterState>({
-    search: "",
+    search: initialSearch,
     category: "all",
     fromYear: MIN_YEAR,
     toYear: MAX_YEAR,
@@ -69,20 +78,27 @@ export function TimelineExplorer({ initialData }: { initialData: Milestone[] }) 
   }, [indexed, state]);
 
   return (
-    <div className="mt-8 flex flex-col gap-10 lg:flex-row lg:items-start">
-      <aside className="lg:sticky lg:top-8 lg:w-72 lg:shrink-0">
-        <FilterBar
-          availableCategories={availableCategories}
-          state={state}
-          minYear={MIN_YEAR}
-          maxYear={MAX_YEAR}
-          resultCount={filtered.length}
-          onChange={setState}
-        />
-      </aside>
+    <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-12">
+      <SiteSidebar
+        total={total}
+        search={state.search}
+        onSearchChange={(v) => setState((s) => ({ ...s, search: v }))}
+      />
       <div className="min-w-0 flex-1">
         <div className="mb-8">
           <AdoptionVelocityChart milestones={filtered} />
+        </div>
+        {/* Search + category + year filters, kept in the flow under the chart so
+            they persist as you filter. */}
+        <div className="mb-8 rounded-lg border border-edge bg-panel p-5">
+          <FilterBar
+            availableCategories={availableCategories}
+            state={state}
+            minYear={MIN_YEAR}
+            maxYear={MAX_YEAR}
+            resultCount={filtered.length}
+            onChange={setState}
+          />
         </div>
         <Timeline milestones={filtered} />
       </div>

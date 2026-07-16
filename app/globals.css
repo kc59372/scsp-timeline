@@ -10,3 +10,78 @@ body {
   background-color: theme("colors.paper");
   color: #2b2f33;
 }
+
+/* Dual-thumb year-range slider: two <input type=range> overlaid on one track.
+   The inputs are transparent + pointer-events:none; only their thumbs capture
+   pointer events, so both handles are draggable on a single shared track. */
+.range-slider {
+  position: relative;
+  height: 1.5rem;
+}
+.range-slider .rs-track,
+.range-slider .rs-fill {
+  position: absolute;
+  top: 50%;
+  height: 4px;
+  border-radius: 9999px;
+  transform: translateY(-50%);
+}
+.range-slider .rs-track {
+  left: 0;
+  right: 0;
+  background: #e3e6e9;
+}
+.range-slider .rs-fill {
+  background: #b31942;
+}
+.range-slider input[type="range"] {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 18px;
+  margin: 0;
+  transform: translateY(-50%);
+  background: transparent;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.range-slider input[type="range"]::-webkit-slider-runnable-track {
+  background: transparent;
+  border: none;
+}
+.range-slider input[type="range"]::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+.range-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  height: 18px;
+  width: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #b31942;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+.range-slider input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  height: 18px;
+  width: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #b31942;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+.range-slider input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid #b31942;
+  outline-offset: 2px;
+}
+.range-slider input[type="range"]:focus-visible::-moz-range-thumb {
+  outline: 2px solid #b31942;
+  outline-offset: 2px;
+}
