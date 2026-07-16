@@ -12,8 +12,6 @@ login — teammates just open the URL.
 > Vercel Pro. Neon's free tier has no such restriction. There are no paid cron
 > jobs — the scraper runs on GitHub Actions, not Vercel Cron.
 
-For the Docker self-host route instead, see [DEPLOY.md](./DEPLOY.md).
-
 ---
 
 ## 1. Create the database (Neon)

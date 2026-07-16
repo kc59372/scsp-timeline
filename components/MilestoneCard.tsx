@@ -6,7 +6,7 @@ import type { Milestone } from "@/lib/milestones";
 import { categoryColor, categoryLabel, pillStyle, textStyle } from "@/lib/categories";
 import { formatMilestoneDate, primaryDateIso, devCycle, formatUsd, displayName, displayActor, displayDescription } from "@/lib/format";
 
-/** Expandable timeline card. Ports legacy .timeline-card markup to Tailwind. */
+/** Expandable timeline card. */
 export function MilestoneCard({ milestone }: { milestone: Milestone }) {
   const [expanded, setExpanded] = useState(false);
   const color = categoryColor(milestone.category);

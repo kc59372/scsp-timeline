@@ -1,6 +1,6 @@
 /**
  * Display helpers for milestones — date formatting, primary-date selection,
- * and the dev-cycle meter (ported from legacy/app.js computeDevelopmentMeter).
+ * and the dev-cycle meter.
  */
 import type { Milestone } from "./milestones";
 import { cleanText } from "./clean";
@@ -88,7 +88,7 @@ export interface DevCycle {
 
 /**
  * Dev-cycle meter: span from devStartDate to the primary date, scaled to 1–5
- * bars (2 years per bar, 10+ years = full). Ported from legacy/app.js.
+ * bars (2 years per bar, 10+ years = full).
  */
 export function devCycle(m: Milestone): DevCycle | null {
   if (!m.devStartDate) return null;

@@ -2,13 +2,12 @@
  * TypeScript view of the curated program registry (scrapers/programs.json).
  *
  * The registry is the single source of truth for cross-source lifecycle
- * grouping; the Python scrapers (scrapers/programs.py) and the retroactive
- * migration (scripts/backfill_programs.js) match item text against it. This
- * module mirrors that matcher so the server-side verifier (lib/verify.ts) can
- * decide, authoritatively, whether a scraped entry names a *tracked* program —
- * the signal that gates auto-approval.
+ * grouping; the Python scrapers (scrapers/programs.py) match item text against
+ * it. This module mirrors that matcher so the server-side verifier
+ * (lib/verify.ts) can decide, authoritatively, whether a scraped entry names a
+ * *tracked* program — the signal that gates auto-approval.
  *
- * Matching rules (kept identical to programs.py / backfill_programs.js):
+ * Matching rules (kept identical to programs.py):
  *   - `aliases`  match case-INSENSITIVELY as whole words/phrases.
  *   - `acronyms` match case-SENSITIVELY as whole words (so lowercase
  *     coincidences and ambiguous codes like "CCA" don't false-hit).

@@ -1,199 +1,110 @@
 # US Military AI Adoption Timeline
 
-A US military AI adoption tracker for policymakers and developers. It surfaces
-military AI milestones — procurement contracts, fielded systems, policy
-directives, and technology developments — as **program lifecycle tracks**
-(request → award → test → fielding → deployment), with filtering and an
-adoption-velocity view. Scope: **2016–2026, US-focused**, sourced only from
-official **.mil / .gov** (and public-domain DoD) sources.
+An interactive tracker of US military AI adoption for policymakers and
+developers. It surfaces military AI milestones — procurement contracts, fielded
+systems, policy directives, and technology developments — as **program lifecycle
+tracks** (request → award → test → fielding → deployment), with category
+filtering and an adoption-velocity view.
 
-See [CLAUDE.md](./CLAUDE.md) for the full product spec, schema, and build
-history. Visual design reference: [SCSP Space Race](https://www.scsp.ai/space-race/).
+**Scope:** 2016–2026, US-focused. **Sources:** official **.mil / .gov** and
+public-domain DoD media only. **Live:** https://scsp-timeline.vercel.app.
 
-## Status
+---
 
-| Phase | Scope | State |
-|---|---|---|
-| 1 — Foundation | Next.js + Prisma scaffold, Docker Postgres | ✅ Done |
-| 2 — Seed Data | US systems, contracts, policy directives | ✅ Done |
-| 3 — Scrapers | `.mil`/`.gov`-only ingestion roster + backfill | ✅ Done |
-| 4 — Frontend | Timeline, program tracks, filters, velocity chart | ✅ Done |
-| 5 — Admin | Review queue, merge-by-program, edit, auth, API | ✅ Done |
-| 6 — Deploy | Docker self-host + scheduled scraping | ✅ Done |
-| + | **Program lifecycle model** (events grouped into programs) | ✅ Done |
-| + | **Historical backfill** to 2016 (SAM.gov, USAspending, DVIDS) | ✅ Done |
-
-The previous static-HTML prototype is archived under [`legacy/`](./legacy/).
-
-## Data model: programs & lifecycle events
+## Design
 
 The core idea is that a system's adoption is a **lifecycle**, not a single
-event. So:
+event:
 
-- A **`Program`** is a system/initiative (e.g. *Maven Smart System*).
-- A **`Milestone`** is a single dated **event** in that program's lifecycle,
-  tagged with an **`EventType`** (`RD_START → SOLICITATION → AWARD → TEST →
-  FIELDING → DEPLOYMENT`, plus `POLICY`/`OTHER`).
-- Scrapers assign a stable `programSlug` so events auto-link into a program when
-  confident (SAM.gov/USAspending); looser matches land **ungrouped** and an
-  admin **merges** them into the right program from the review queue.
+- A **`Program`** is a system or initiative (e.g. *Maven Smart System*).
+- A **`Milestone`** is one dated **event** in that program's lifecycle, tagged
+  with an **`EventType`** (`RD_START → SOLICITATION → AWARD → TEST → FIELDING →
+  DEPLOYMENT`, plus `POLICY` / `OTHER`).
 - A program's `systemStatus` is derived from its furthest-along event.
+- Events auto-link into a program when a scraper is confident (via a stable
+  `programSlug`); looser matches land ungrouped for an admin to **merge**.
 
-Standalone events (no program) still render as individual cards. The public
-timeline renders each program as one lifecycle track; `/program/[id]` shows the
-full adoption profile.
+The public timeline renders each program as one lifecycle track and standalone
+events as individual cards. `/program/[id]` shows the full adoption profile;
+`/system/[id]` shows a single event. Milestones are color-coded by mission
+domain (`Category`) — palette in [docs/CATEGORY_COLORS.md](./docs/CATEGORY_COLORS.md),
+source of truth [`lib/categories.ts`](./lib/categories.ts). An
+**adoption-velocity** chart plots milestones per year to convey how fast
+adoption is accelerating.
 
-## Tech Stack
+## Methods (data ingestion)
+
+All sources are official **.mil / .gov** or public-domain DoD media — commercial
+news feeds are excluded to avoid copyright issues.
+
+| Source | Reach |
+|---|---|
+| **SAM.gov** — solicitations + awards | 2016→present (chunked ≤1yr/call) |
+| **USAspending.gov** — DoD contract awards | 2016→present |
+| **DVIDS** — DoD news / press releases | 2016→present |
+| **Congress.gov** — AI legislation | recent (title search) |
+| **SBIR.gov** — DoD SBIR/STTR AI awards | historical |
+| **af / army / navy / spaceforce / darpa / defense / gao** (RSS) | recent (~1yr) |
+
+Scraped items flow through a **verification gate** ([`lib/verify.ts`](./lib/verify.ts))
+that sets each entry's review status instead of blanket-queuing everything:
+entries naming a curated program auto-approve, news is triaged (approve /
+review / reject) against a curated rubric, and clearly-irrelevant items are
+auto-rejected. Nothing publishes without clearing that gate. Full per-source
+notes: **[scrapers/README.md](./scrapers/README.md)**.
+
+## Development
 
 - **Frontend:** Next.js 14 (App Router) + React 18 + Tailwind CSS + TypeScript
 - **Database:** PostgreSQL via Prisma ORM
-- **Auth (admin):** NextAuth.js — a single shared credential (see below)
+- **Auth (admin):** NextAuth.js — a single shared team credential
 - **Scrapers:** Python 3 (`urllib` + `feedparser`) — see [`scrapers/`](./scrapers/)
-- **Local DB / deploy:** Docker Compose (Postgres 16; prod stack adds the web app)
+- **Hosting:** Vercel + Neon Postgres; daily scrape via GitHub Actions
 
-## Data ingestion (scrapers)
+### Quick start
 
-All sources are official **.mil / .gov** or public-domain DoD media — commercial
-news feeds were removed to avoid copyright issues. Everything scraped lands as
-`PENDING` for admin review; nothing auto-publishes.
-
-| Source | Reach | Key? |
-|---|---|---|
-| **SAM.gov** — solicitations + awards | 2016→present (chunked ≤1yr/call) | free key |
-| **USAspending.gov** — DoD contract awards | 2016→present | none |
-| **DVIDS** — DoD news / press releases | 2016→present (historical) | free public key |
-| **Congress.gov** — AI legislation | recent (title search) | free key |
-| **SBIR.gov** — DoD SBIR/STTR AI awards | historical | none (rate-limited) |
-| **af / army / navy / spaceforce / darpa / defense / gao** (RSS) | recent (~last ~1yr at `max=500`) | none |
-
-`scrapers/backfill.py` runs the whole roster in one pass. Full setup, per-source
-notes, and the historical-data rationale live in
-**[`scrapers/README.md`](./scrapers/README.md)**.
-
-## Deployment
-
-**Live on Vercel + Neon Postgres: https://scsp-timeline.vercel.app.** Scrapers
-run on a schedule via GitHub Actions (or locally); `/api/ingest` is protected by
-a shared `INGEST_TOKEN`. A **shared review queue = one deployment + one
-database** — teammates access the same URL with the shared admin login.
-
-News triage: the deployment has no `ANTHROPIC_API_KEY`, so the automated scrape
-triages news with a deterministic keyword fallback. For higher-quality triage we
-periodically **rerun the scraper locally with Claude Code as the triage engine**
-(dry-run scrape → Claude classifies news via the `lib/verify.ts` 3-bucket rubric
-→ ingest to Neon).
-
-- **[DEPLOY_VERCEL.md](./DEPLOY_VERCEL.md)** — the Vercel + Neon runbook (current).
-- **[DEPLOY.md](./DEPLOY.md)** — the Docker self-host runbook (fallback).
-- **[DEPLOY_WITH_CLAUDE.md](./DEPLOY_WITH_CLAUDE.md)** — a paste-able prompt to
-  have Claude Code perform the Docker deploy on a host machine.
-
-## Local Setup
-
-### Prerequisites
-- Node.js 18+ and npm
-- **Docker Desktop** (for local Postgres) — https://www.docker.com/products/docker-desktop/
-- Python 3.11+ (only if running scrapers locally)
-
-### 1. Install dependencies
 ```bash
 npm install
+cp .env.example .env          # defaults match the local Docker Postgres below
+docker compose up -d          # local Postgres 16 on :5432
+npx prisma migrate dev        # apply schema
+npx prisma db seed            # load verified US seed data (idempotent, resets tables)
+npm run dev                   # http://localhost:3000
 ```
 
-### 2. Configure environment
-```bash
-cp .env.example .env
-```
-The default `DATABASE_URL` already matches the Docker Postgres below — no edits
-needed for basic local dev. (Scraper API keys are optional; add them to `.env`
-to run those scrapers locally.)
+Common commands: `npm run db:studio` (DB browser), `npm run db:reset` (drop +
+migrate + seed), `npm run build` (production build).
 
-### 3. Start Postgres
-```bash
-docker compose up -d
-```
-Runs Postgres 16 on `localhost:5432` (db `scsp_timeline`, user `scsp`).
+To run the scrapers locally:
 
-### 4. Apply the schema
-```bash
-npx prisma migrate dev
-```
-
-### 5. Seed the database
-```bash
-npx prisma db seed
-```
-Loads the verified US research data as **3 program lifecycle tracks** (Maven,
-GenAI.mil, Manta Ray) plus standalone contracts and policy directives, and
-prints counts. The seed is idempotent but **destructive** — re-running resets
-the milestone + program tables.
-
-### 6. Run the app
-```bash
-npm run dev
-```
-Open http://localhost:3000.
-
-### 7. (Optional) Run the scrapers locally
 ```bash
 python3 -m venv scrapers/.venv
 scrapers/.venv/bin/pip install -r scrapers/requirements.txt
-set -a; source .env; set +a                       # loads any API keys + INGEST_URL
-scrapers/.venv/bin/python scrapers/backfill.py --fixtures --dry-run   # offline smoke test
-scrapers/.venv/bin/python scrapers/backfill.py --limit 200            # live fetch → POST to /api/ingest
+set -a; source .env; set +a
+scrapers/.venv/bin/python scrapers/backfill.py --fixtures --dry-run  # offline smoke test
+scrapers/.venv/bin/python scrapers/backfill.py --limit 200           # live → /api/ingest
 ```
 
-## Useful Commands
+### Admin
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Start the Next.js dev server |
-| `npm run build` | Production build |
-| `docker compose up -d` | Start local Postgres |
-| `docker compose down` | Stop Postgres (keeps data volume) |
-| `npm run db:migrate` | `prisma migrate dev` |
-| `npm run db:seed` | Seed the database |
-| `npm run db:studio` | Open Prisma Studio (DB browser) |
-| `npm run db:reset` | Drop, re-migrate, and re-seed |
-| `scrapers/.venv/bin/python scrapers/backfill.py --fixtures --dry-run` | Offline scraper smoke test |
+The review queue lives at `/admin` (auth-gated). Scraped entries arrive as
+`PENDING` and never appear publicly until approved. Reviewers can approve/reject
+(individually or in bulk), edit any field, and merge events into a program to
+build a lifecycle. Auth is one shared credential for the whole team
+(`ADMIN_EMAIL` + `ADMIN_PASSWORD_HASH`); generate the hash with
+`scripts/hash_password.ts`.
 
-## Admin Dashboard
+## Deployment
 
-The internal review queue lives at `/admin` (auth-gated). Scraped entries arrive
-as `PENDING` and never appear publicly until an admin approves them. Reviewers
-can approve/reject (individually or in bulk), edit any field, set an event's
-type/date, and **merge selected events into a program** to build a lifecycle.
-
-Auth is a **single shared credential** (one login for the whole team — not
-per-user), set via env:
-
-```bash
-# 1. generate a bcrypt hash for your chosen password
-npx ts-node scripts/hash_password.ts 'your-password'
-
-# 2. set in .env
-ADMIN_EMAIL="admin@scsp.ai"
-ADMIN_PASSWORD_HASH="<paste hash>"
-NEXTAUTH_SECRET="<openssl rand -base64 32>"
-```
-
-> **⚠️ bcrypt hashes contain `$` — escaping differs by environment:**
-> - **Local shell `.env`** (this file): escape each `$` as `\$` (e.g. `\$2b\$10\$…`).
-> - **docker-compose `env_file` (`.env.production`)**: escape each `$` as `$$` —
->   Compose interpolates `env_file` values, so an unescaped hash is silently
->   mangled and login fails. `scripts/hash_password.ts` prints the `$$`-escaped
->   form on stderr for convenience.
-
-Then visit http://localhost:3000/admin and sign in.
+Live on **Vercel + Neon Postgres**; scrapers run daily via GitHub Actions and
+POST to a token-protected `/api/ingest`. A shared review queue means one
+deployment + one database — teammates use the same URL and shared admin login.
+Full runbook: **[DEPLOY_VERCEL.md](./DEPLOY_VERCEL.md)**. A Docker Compose stack
+(`docker-compose.prod.yml`) remains in-repo as a self-host fallback.
 
 ## Data
 
 Seed data lives in [`prisma/seed.ts`](./prisma/seed.ts), drawn from the team's
-research (CLAUDE.md tables + `legacy/data.json`). **No fabricated data** —
-unknown fields are left null.
-
-Known gaps flagged by the seed run:
-- **Procurement:** only the contracts listed in CLAUDE.md are seeded manually;
-  the rest come from the SAM.gov / USAspending scrapers.
-- **Policy:** several directives lack a source URL in the repo (`sourceUrl` =
-  null). Sources must be added before entries go public.
+verified research. **No fabricated data** — unknown fields are left null. The
+seeded set (3 program lifecycles + contracts + policy directives) is the
+baseline; the scrapers grow it from live sources.
