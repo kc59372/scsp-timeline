@@ -149,10 +149,10 @@ export function AdoptionVelocityChart({ milestones }: { milestones: Milestone[] 
                   type="button"
                   onClick={() => setPinnedYear((p) => (p === y ? null : y))}
                   aria-label={`${y}: ${c} milestone(s) — show category share`}
-                  className={`w-full rounded-t bg-gradient-to-t from-brand to-accent transition-all hover:opacity-90 ${
+                  className={`w-full rounded-t transition-all hover:opacity-90 ${
                     isActive ? "ring-2 ring-accent ring-offset-1 ring-offset-panel" : ""
                   }`}
-                  style={{ height: `${h}px` }}
+                  style={{ height: `${h}px`, backgroundColor: "#0A3161" }}
                 />
               ) : (
                 <div className="w-full" style={{ height: "0px" }} />
