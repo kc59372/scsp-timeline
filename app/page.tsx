@@ -6,6 +6,7 @@ import { HomeGraphics } from "@/components/HomeGraphics";
 import { MilestoneCard } from "@/components/MilestoneCard";
 import { ProgramCard } from "@/components/ProgramCard";
 import { SiteSidebar } from "@/components/SiteSidebar";
+import { SiteHeader } from "@/components/SiteHeader";
 
 export const metadata = {
   title: "US Military AI Adoption Timeline",
@@ -32,9 +33,11 @@ export default async function Home() {
     .slice(0, 4);
 
   return (
-    <main className="mx-auto flex max-w-7xl flex-col gap-10 px-6 py-12 lg:flex-row lg:items-start lg:gap-12">
+    <>
+      <SiteHeader total={total} />
+      <main className="mx-auto flex max-w-7xl flex-col gap-10 px-6 py-12 lg:flex-row lg:items-start lg:gap-12">
       {/* ── Persistent site sidebar ── */}
-      <SiteSidebar total={total} />
+      <SiteSidebar />
 
       {/* ── Main column: graphics, recent events, main projects ── */}
       <div className="min-w-0 flex-1 space-y-14">
@@ -79,6 +82,7 @@ export default async function Home() {
           )}
         </section>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

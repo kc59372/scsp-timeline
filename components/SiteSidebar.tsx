@@ -81,18 +81,16 @@ function SidebarSearch({
 }
 
 /**
- * The site's persistent left sidebar — identical title, search, scope note, and
- * nav on every page. `total` shows the verified-milestone count where the page
- * has it. On the timeline, `search`/`onSearchChange` wire the sidebar search to
- * the live filter state; `children` renders any extra page-specific controls.
+ * The site's persistent left sidebar — identical search, scope note, and nav on
+ * every page (the title lives in the top-of-page SiteHeader). On the timeline,
+ * `search`/`onSearchChange` wire the sidebar search to the live filter state;
+ * `children` renders any extra page-specific controls.
  */
 export function SiteSidebar({
-  total,
   children,
   search,
   onSearchChange,
 }: {
-  total?: number;
   children?: ReactNode;
   search?: string;
   onSearchChange?: (v: string) => void;
@@ -101,31 +99,8 @@ export function SiteSidebar({
 
   return (
     <aside className="lg:sticky lg:top-12 lg:max-h-[calc(100vh-3rem)] lg:w-80 lg:shrink-0 lg:overflow-y-auto">
-      <p className="font-mono text-xs uppercase tracking-[0.2em] text-signal">
-        US Military AI Adoption · 2016–2026
-      </p>
-      <h1 className="mt-4 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
-        <Link href="/" className="hover:text-accent">
-          US Military AI Adoption Timeline
-        </Link>
-      </h1>
-      <p className="mt-4 text-sm leading-relaxed text-gray-600">
-        Tracking US military AI milestones — fielded systems, policy directives,
-        and technology developments — for policymakers and developers.
-        {total != null && (
-          <>
-            {" "}
-            <span className="font-mono text-xs text-gray-500">
-              {total} verified milestones and counting.
-            </span>
-          </>
-        )}
-      </p>
-
       {/* Search — present in every sidebar */}
-      <div className="mt-6">
-        <SidebarSearch controlledValue={search} onControlledChange={onSearchChange} />
-      </div>
+      <SidebarSearch controlledValue={search} onControlledChange={onSearchChange} />
 
       {/* Scope note */}
       <section className="mt-8 rounded-lg border border-edge bg-panel p-5">
