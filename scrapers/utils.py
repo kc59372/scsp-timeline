@@ -38,8 +38,8 @@ USER_AGENT = "scsp-timeline-scraper/1.0 (US military AI adoption timeline; conta
 # Valid Category enum values (mirror of prisma/schema.prisma).
 CATEGORIES = {
     "UNMANNED_SYSTEMS", "COMMAND_CONTROL", "ISR", "LOGISTICS_SUSTAINMENT",
-    "CYBER", "TARGETING", "POLICY_DIRECTIVE", "PROCUREMENT_CONTRACT",
-    "TRAINING_SIMULATION", "MEDICAL", "SPACE", "RESEARCH_DEVELOPMENT",
+    "CYBER", "TARGETING", "POLICY_DIRECTIVE", "TRAINING_SIMULATION",
+    "MEDICAL", "SPACE", "RESEARCH_DEVELOPMENT", "OTHER",
 }
 
 # Valid EventType enum values (mirror of prisma/schema.prisma). A milestone is a

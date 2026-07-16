@@ -452,7 +452,13 @@ export async function verifyEntry(input: VerifyInput): Promise<Verdict> {
   // Procurement awards (SAM.gov / USAspending): structured, high-volume. Keep
   // the cheap keyword path — relevant → queue; otherwise let the LLM decide
   // queue-vs-reject. Contracts never LLM-auto-approve (allowApprove = false).
-  const isProcurement = input.category === "PROCUREMENT_CONTRACT" || input.contractValue != null;
+  // Procurement is now identified by provenance/shape, not the category (which
+  // is inferred to a real domain like everything else). SAM.gov / USAspending
+  // are the award sources; a non-null contractValue is a fallback signal.
+  const isProcurement =
+    input.sourceName === "SAM.gov" ||
+    input.sourceName === "USAspending.gov" ||
+    input.contractValue != null;
   if (isProcurement) {
     if (isRelevant(haystack)) {
       return { status: "PENDING", method: "rule-relevant", reason: "AI/autonomy keyword relevance" };

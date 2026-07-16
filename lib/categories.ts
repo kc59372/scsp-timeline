@@ -23,12 +23,14 @@ export const CATEGORY_STYLES: Record<string, CategoryStyle> = {
   LOGISTICS_SUSTAINMENT: { label: "Logistics & Sustainment", color: "#DA7447" },
   MEDICAL: { label: "Medical", color: "#2F7D5F" },
   POLICY_DIRECTIVE: { label: "Policy / Directive", color: "#7B7B7B" },
-  PROCUREMENT_CONTRACT: { label: "Procurement Contract", color: "#436829" },
   RESEARCH_DEVELOPMENT: { label: "Research & Development", color: "#B5527D" },
   SPACE: { label: "Space", color: "#8397D2" },
   TARGETING: { label: "Targeting", color: "#A6392E" },
   TRAINING_SIMULATION: { label: "Training & Simulation", color: "#B07D2B" },
   UNMANNED_SYSTEMS: { label: "Unmanned Systems", color: "#4A6C8C" },
+  // Catch-all bucket — a warm taupe kept visually distinct from the cool policy
+  // grey (#7B7B7B) and the blues so the legend reads cleanly.
+  OTHER: { label: "Other", color: "#877A6B" },
 };
 
 const FALLBACK: CategoryStyle = { label: "Other", color: "#7B7B7B" };

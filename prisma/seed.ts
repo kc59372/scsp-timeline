@@ -73,7 +73,7 @@ const programs: Prisma.ProgramCreateInput[] = [
           name: "Project Maven ATR contract (Palantir)",
           actor: "ONR/NGA/CDAO",
           country: "US",
-          category: "PROCUREMENT_CONTRACT",
+          category: "TARGETING", // Maven = automatic target recognition; matches its program
           eventType: "AWARD",
           // FY24 award (contract number N00014-24-C-XXXX encodes fiscal 2024;
           // primary Palantir source is a 2024 announcement).
@@ -269,7 +269,7 @@ const contracts: Prisma.MilestoneCreateInput[] = [
     name: "AFRL Distributed C2 (Palantir / Booz Allen)",
     actor: "AFRL",
     country: "US",
-    category: "PROCUREMENT_CONTRACT",
+    category: "COMMAND_CONTROL",
     description: "Distributed command-and-control contract under AFRL.",
     contractNumber: "FA875023S7006",
     contractValue: 99_000_000,
@@ -285,7 +285,7 @@ const contracts: Prisma.MilestoneCreateInput[] = [
     name: "JWCC Multi-Cloud (Joint Warfighting Cloud Capability)",
     actor: "WHS/DISA",
     country: "US",
-    category: "PROCUREMENT_CONTRACT",
+    category: "OTHER", // enterprise multi-cloud vehicle — spans domains, no single one
     description:
       "Joint Warfighting Cloud Capability — multi-cloud award spanning AWS, " +
       "Google, Microsoft, and Oracle.",
@@ -306,7 +306,7 @@ const contracts: Prisma.MilestoneCreateInput[] = [
     name: "Human-UAS Swarming (Mile Two LLC)",
     actor: "AFRL",
     country: "US",
-    category: "PROCUREMENT_CONTRACT",
+    category: "UNMANNED_SYSTEMS",
     description: "Human-UAS swarming research and development contract.",
     contractNumber: "FA8650-22-F-2611",
     contractValue: 14_780_000,
@@ -320,7 +320,7 @@ const contracts: Prisma.MilestoneCreateInput[] = [
     name: "Tradewinds Marketplace (Scale AI, Anduril, C3 AI)",
     actor: "CDAO",
     country: "US",
-    category: "PROCUREMENT_CONTRACT",
+    category: "OTHER", // multi-award AI/ML marketplace vehicle — spans domains
     description:
       "CDAO Tradewinds Marketplace — multi-award vehicle for AI/ML " +
       "capabilities. Value is multi-award (not a single fixed figure).",
