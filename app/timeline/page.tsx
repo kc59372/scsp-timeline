@@ -18,10 +18,9 @@ export default async function TimelinePage() {
         US Military AI Adoption Timeline
       </h1>
       <p className="mt-6 max-w-2xl text-lg text-gray-600">
-        An interactive tracker of US military AI milestones — procurement
-        contracts, fielded systems, policy directives, and technology
-        developments — built for policymakers and developers. {total} verified
-        milestones and counting.
+        An interactive tracker of US military AI milestones: fielded systems,
+        policy directives, and technology developments. Built for policymakers
+        and developers. {total} verified milestones and counting.
       </p>
       <TimelineExplorer initialData={items} />
     </main>

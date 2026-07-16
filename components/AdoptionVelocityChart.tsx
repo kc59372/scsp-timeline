@@ -91,7 +91,7 @@ export function AdoptionVelocityChart({ milestones }: { milestones: Milestone[] 
     <div className="rounded-lg border border-edge bg-panel p-5">
       <div className="mb-1 flex items-baseline justify-between">
         <span className="font-mono text-xs uppercase tracking-[0.1em] text-signal">Adoption Velocity</span>
-        <span className="font-mono text-[0.65rem] text-gray-500">hover a year for category share</span>
+        <span className="font-mono text-[0.65rem] text-gray-500">hover over a year for category breakdown</span>
       </div>
       <p className="mb-5 text-sm text-gray-600">
         Tracked US military AI milestones per year — the pace of adoption over time.
