@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Milestone } from "@/lib/milestones";
+import { compareCategories } from "@/lib/categories";
 import { primaryYear } from "@/lib/format";
 import { FilterBar, type FilterState } from "./FilterBar";
 import { AdoptionVelocityChart } from "./AdoptionVelocityChart";
@@ -22,7 +23,7 @@ export function TimelineExplorer({ initialData }: { initialData: Milestone[] }) 
   });
 
   const availableCategories = useMemo(
-    () => Array.from(new Set(initialData.map((m) => m.category))).sort(),
+    () => Array.from(new Set(initialData.map((m) => m.category))).sort(compareCategories),
     [initialData],
   );
 
