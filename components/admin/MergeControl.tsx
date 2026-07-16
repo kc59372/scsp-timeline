@@ -22,7 +22,7 @@ export function MergeControl({
   const [mode, setMode] = useState<"existing" | "new">("existing");
   const [programId, setProgramId] = useState("");
   const [newName, setNewName] = useState("");
-  const [newCategory, setNewCategory] = useState("PROCUREMENT_CONTRACT");
+  const [newCategory, setNewCategory] = useState(Object.keys(CATEGORY_STYLES)[0]);
   const [newActor, setNewActor] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);

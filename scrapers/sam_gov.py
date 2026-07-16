@@ -2,7 +2,9 @@
 """SAM.gov procurement scraper — official Opportunities API (api.sam.gov).
 
 Searches AI/autonomy-related federal contract opportunities and emits them as
-normalized PROCUREMENT_CONTRACT milestones for /api/ingest.
+normalized AWARD/SOLICITATION milestones for /api/ingest. The mission-domain
+category is inferred from the contract text (falling back to OTHER); "it's a
+contract" is carried by eventType + the contract fields, not the category.
 
 Usage:
   python scrapers/sam_gov.py --fixtures --dry-run     # offline, no key, prints
@@ -28,6 +30,7 @@ from urllib import request as urlrequest
 import programs  # curated program registry (matcher + focused query terms)
 import utils
 from programs import match_program  # curated cross-source program registry
+from rss import infer_category  # keyword domain inference (falls back to OTHER)
 from rss import is_relevant_procurement  # stricter AI/autonomy gate for contracts
 
 API_URL = "https://api.sam.gov/opportunities/v2/search"
@@ -169,7 +172,7 @@ def map_opportunity(op: dict[str, Any], description: str) -> dict[str, Any]:
 
     return utils.to_milestone(
         name=title,
-        category=program["category"] if program else "PROCUREMENT_CONTRACT",
+        category=program["category"] if program else infer_category(f"{title} {description}"),
         actor=op.get("fullParentPathName") or "US Government",
         description=description or op.get("type") or "",
         source_url=op.get("uiLink") or f"https://sam.gov/opp/{op.get('noticeId', '')}/view",

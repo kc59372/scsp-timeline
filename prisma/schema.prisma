@@ -106,11 +106,11 @@ enum Category {
   CYBER // Cybersecurity, EW, signals
   TARGETING // Targeting systems, sensor-to-shooter
   POLICY_DIRECTIVE // Executive orders, NSPMs, DoD directives
-  PROCUREMENT_CONTRACT // SAM.gov contracts, OTAs
   TRAINING_SIMULATION // Wargaming, TTX, synthetic data
   MEDICAL // Battlefield medical AI
   SPACE // Space domain awareness
   RESEARCH_DEVELOPMENT // DARPA programs, university research
+  OTHER // Catch-all: no domain keyword matched (e.g. general AI/ML R&D, cross-domain vehicles)
 }
 
 enum Country {

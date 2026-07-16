@@ -49,10 +49,12 @@ const sql = neon(url);
 const apply = process.argv.includes("--apply");
 
 // Only news/RSS items — skip procurement contracts (their names are contract
-// descriptions, and framing words there would be coincidental).
+// descriptions, and framing words there would be coincidental). Procurement is
+// identified by source (there is no longer a PROCUREMENT_CONTRACT category).
 const rows = await sql`
   select id, name, "sourceName" from "Milestone"
-  where "entryStatus" = 'APPROVED' and category <> 'PROCUREMENT_CONTRACT'`;
+  where "entryStatus" = 'APPROVED'
+    and "sourceName" not in ('SAM.gov', 'USAspending.gov')`;
 const hits = rows.filter((r) => isNonMilestoneFraming(r.name));
 
 console.log(`Scanned ${rows.length} approved non-procurement items; ${hits.length} trip framing:`);

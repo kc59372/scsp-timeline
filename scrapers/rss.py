@@ -44,20 +44,27 @@ NEGATIVE_CONTEXT = ("drone show", "drone light", "light show")
 
 # Ordered keyword → Category rules (first match wins). Bare "intelligence" is
 # deliberately NOT an ISR keyword — it collides with "artificial intelligence".
+#
+# There is deliberately NO "PROCUREMENT_CONTRACT" rule: "it's a contract" is a
+# funding instrument, not a mission domain (already captured by eventType=AWARD
+# + the contract fields), so awards are inferred to a real domain like any other
+# item. Specific-domain rules (TARGETING, ISR, CYBER, C2, SPACE) sit ahead of the
+# broad UNMANNED platform rule so e.g. an "autonomous weapon" lands in TARGETING
+# rather than being swallowed by a platform word. Anything that matches no domain
+# falls through to DEFAULT_CATEGORY = OTHER (the catch-all), NOT R&D.
 CATEGORY_RULES: list[tuple[str, list[str]]] = [
-    ("UNMANNED_SYSTEMS", ["unmanned", "drone", "uuv", "usv", "uav", "underwater", "robot"]),
-    ("POLICY_DIRECTIVE", ["policy", "directive", "executive order", "strategy", "memorandum", "guidance"]),
-    ("PROCUREMENT_CONTRACT", ["contract", "award", "procurement", "rfi", "solicitation", "ota"]),
-    ("ISR", ["isr", "surveillance", "reconnaissance"]),
+    ("TARGETING", ["targeting", "target recognition", "atr", "sensor-to-shooter", "fires", "weapon", "weapons", "kinetic", "munition", "strike"]),
+    ("ISR", ["isr", "surveillance", "reconnaissance", "sensor", "sensors"]),
+    ("CYBER", ["cyber", "electronic warfare", "signals", "deepfake", "incident response"]),
     ("COMMAND_CONTROL", ["command and control", "c2", "battle management", "jadc2"]),
-    ("CYBER", ["cyber", "electronic warfare", "signals"]),
-    ("TARGETING", ["targeting", "sensor-to-shooter", "fires"]),
-    ("LOGISTICS_SUSTAINMENT", ["logistics", "sustainment", "maintenance", "supply"]),
-    ("TRAINING_SIMULATION", ["wargame", "training", "simulation", "exercise", "tabletop"]),
     ("SPACE", ["space", "satellite", "orbital"]),
+    ("UNMANNED_SYSTEMS", ["unmanned", "drone", "drones", "uav", "uas", "uuv", "usv", "auv", "underwater", "maritime", "naval", "vessel", "swarm", "swarming", "robot", "robotics", "autonomous vehicle"]),
+    ("LOGISTICS_SUSTAINMENT", ["logistics", "sustainment", "maintenance", "supply", "acquisition"]),
+    ("TRAINING_SIMULATION", ["wargame", "training", "simulation", "exercise", "tabletop"]),
     ("MEDICAL", ["medical", "casualty", "health"]),
+    ("POLICY_DIRECTIVE", ["policy", "directive", "executive order", "strategy", "memorandum", "guidance"]),
 ]
-DEFAULT_CATEGORY = "RESEARCH_DEVELOPMENT"
+DEFAULT_CATEGORY = "OTHER"
 
 # Ordered keyword → EventType rules (first match wins). Used to place a news
 # item on the lifecycle; falls back to the source's default_event_type.

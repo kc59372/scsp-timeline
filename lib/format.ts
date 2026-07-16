@@ -156,7 +156,9 @@ export function contractTitle(name: string): string {
  * passes everything else through untouched.
  */
 export function displayName(m: Milestone): string {
-  if (m.category === "PROCUREMENT_CONTRACT") return contractTitle(m.name);
+  // A procurement award (raw ALL-CAPS scraped title) is identified by its
+  // contract fields, not the category — categories are now real mission domains.
+  if (m.contractNumber != null || m.contractValue != null) return contractTitle(m.name);
   return cleanText(m.name) || m.name;
 }
 

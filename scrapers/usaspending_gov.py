@@ -27,6 +27,7 @@ import programs  # curated program registry (matcher + focused query terms)
 import utils
 from programs import match_program  # curated cross-source program registry
 from rss import is_relevant_procurement  # stricter AI/autonomy gate for contracts
+from rss import infer_category  # keyword domain inference (falls back to OTHER)
 
 API_URL = "https://api.usaspending.gov/api/v2/search/spending_by_award/"
 KEYWORDS = ["artificial intelligence", "machine learning", "autonomous", "unmanned"]
@@ -57,7 +58,7 @@ def map_award(aw: dict[str, Any]) -> dict[str, Any]:
     program = match_program(f"{name} {desc}")
     return utils.to_milestone(
         name=name,
-        category=program["category"] if program else "PROCUREMENT_CONTRACT",
+        category=program["category"] if program else infer_category(f"{name} {desc}"),
         actor=recipient,
         description=desc,
         source_url=AWARD_URL.format(gid) if gid else "https://www.usaspending.gov/",

@@ -21,12 +21,12 @@ const CATEGORIES = [
   ["LOGISTICS_SUSTAINMENT", "Predictive maintenance for fleet sustainment"],
   ["MEDICAL", "Battlefield triage decision-support tool"],
   ["POLICY_DIRECTIVE", "Directive on responsible AI adoption"],
-  ["PROCUREMENT_CONTRACT", "AI/autonomy services contract award"],
   ["RESEARCH_DEVELOPMENT", "DARPA autonomy research program"],
   ["SPACE", "Space domain-awareness AI tracking"],
   ["TARGETING", "Sensor-to-shooter targeting pipeline"],
   ["TRAINING_SIMULATION", "AI-driven synthetic wargaming environment"],
   ["UNMANNED_SYSTEMS", "Autonomous unmanned surface vessel trial"],
+  ["OTHER", "General AI/ML R&D effort (no single mission domain)"],
 ];
 
 async function clean() {

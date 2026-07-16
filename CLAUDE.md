@@ -185,12 +185,20 @@ enum Category {
   CYBER                   // Cybersecurity, EW, signals
   TARGETING               // Targeting systems, sensor-to-shooter
   POLICY_DIRECTIVE        // Executive orders, NSPMs, DoD directives
-  PROCUREMENT_CONTRACT    // SAM.gov contracts, OTAs
   TRAINING_SIMULATION     // Wargaming, TTX, synthetic data
   MEDICAL                 // Battlefield medical AI
   SPACE                   // Space domain awareness
   RESEARCH_DEVELOPMENT    // DARPA programs, university research
+  OTHER                   // Catch-all: matched no mission-domain keyword (general AI/ML R&D, cross-domain vehicles)
 }
+
+// NOTE: there is no PROCUREMENT_CONTRACT category. A contract is a funding
+// instrument, not a mission domain — "it's a contract" is carried by
+// eventType=AWARD + the contract fields (contractNumber/contractValue/awardedTo),
+// while `category` records the substantive domain (TARGETING, ISR, …), inferred
+// from the item text and falling back to OTHER. (Historical note: an earlier
+// build had a PROCUREMENT_CONTRACT category; it was removed and its rows
+// reassigned to inferred domains — see prisma/migrations/*_remove_procurement_category.)
 
 enum Country {
   US          // Active for MVP
@@ -391,8 +399,8 @@ and public-domain DoD sources. Each scraper emits normalized events (with an
    - Cyber
    - Targeting
    - Policy / Directive
-   - Procurement Contract
    - Training / Simulation
+   - Other (catch-all; contracts are categorized by mission domain, not as a "procurement" bucket)
    - Date range slider (2016–2026)
 
 3. **Profile Pages** — "adoption profiles" per pitch deck:
