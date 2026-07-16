@@ -4,7 +4,7 @@
  *
  * An event with a `programId` clusters with its siblings into one ProgramEntry
  * (rendered as a request → award → test → deployment track); an event without a
- * program renders as a standalone MilestoneEntry (the legacy card).
+ * program renders as a standalone MilestoneEntry (an individual card).
  */
 import type { Milestone, Program } from "./milestones";
 import { primaryYear, primaryDateIso } from "./format";

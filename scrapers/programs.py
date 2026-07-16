@@ -14,8 +14,8 @@ headlines because arbitrary extraction is unreliable — a *curated* set is not)
     or an ambiguous code (e.g. "CCA" = Circuit Card Assembly) can't false-hit.
 First registry entry with any hit wins (keep specific programs earlier).
 
-The TypeScript migration (scripts/backfill_programs) mirrors this logic against
-the same JSON.
+The server-side matcher (lib/registry.ts) mirrors this logic against the same
+JSON.
 """
 from __future__ import annotations
 

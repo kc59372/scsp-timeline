@@ -1,7 +1,7 @@
 /**
  * Database seed — verified US entries from the team's research.
  *
- * Sources: legacy/data.json (Manta Ray, Maven, GenAI.mil source URLs) and the
+ * Sources: the team's research (Manta Ray, Maven, GenAI.mil source URLs) and the
  * seed-data tables in CLAUDE.md (US systems, procurement contracts, policy
  * directives).
  *
@@ -28,7 +28,7 @@ const ym = (year: number, month: number) => new Date(Date.UTC(year, month - 1, 1
 // US Systems as PROGRAMS (3) — the seeded systems are the curated,
 // human-verified counterpart to scraped lifecycles: each is a Program whose
 // events trace request → award → test → deployment. Dates come only from the
-// team's research (CLAUDE.md + legacy/data.json). The Maven "ATR contract"
+// team's research (see CLAUDE.md). The Maven "ATR contract"
 // event is the same $1.4B ONR/NGA/CDAO award listed in the CLAUDE.md
 // procurement table, folded in here as Maven's AWARD stage.
 // ---------------------------------------------------------------------------

@@ -63,7 +63,7 @@ scrapers/.venv/bin/pip install -r scrapers/requirements.txt
 | `CONGRESS_API_KEY` | `congress_gov.py` | Free key — https://api.congress.gov/sign-up/ |
 | `DVIDS_API_KEY` | `dvids_gov.py` | Free **public** key — https://api.dvidshub.net (pass the `key-…` public key) |
 | `INGEST_URL` | all | Defaults to `http://localhost:3000/api/ingest` |
-| `INGEST_TOKEN` | all | Bearer token for `/api/ingest` in production (see DEPLOY.md) |
+| `INGEST_TOKEN` | all | Bearer token for `/api/ingest` in production (see DEPLOY_VERCEL.md) |
 
 `gao_gov.py`, the `*.mil` RSS scrapers, and `sbir_gov.py` need **no key**.
 Read these from the environment (`set -a; source .env; set +a`).

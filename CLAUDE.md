@@ -46,7 +46,7 @@ Three primary research documents inform this project, produced by Amy, Kaci, and
 | Backend/API | Next.js API routes (serverless) |
 | Scraping | Python 3 (`urllib` + `feedparser`); official `.mil`/`.gov` + public-domain DoD APIs/RSS only |
 | Auth (admin) | NextAuth.js — single shared credential (env-based) |
-| Hosting | **Vercel + Neon Postgres** — live at https://scsp-timeline.vercel.app (see `DEPLOY_VERCEL.md`). Docker Compose self-host also works (`DEPLOY.md`) but is no longer the deployment. |
+| Hosting | **Vercel + Neon Postgres** — live at https://scsp-timeline.vercel.app (see `DEPLOY_VERCEL.md`). A Docker Compose stack (`docker-compose.prod.yml`) remains in-repo as a self-host fallback, but is no longer the deployment. |
 | Data ingestion | GitHub Actions cron (daily) → token-protected `/api/ingest` |
 
 ---
@@ -528,8 +528,8 @@ and public-domain DoD sources. Each scraper emits normalized events (with an
 3. `.github/workflows/scrape.yml` — daily cron (06:00 UTC) runs
    `scrapers/backfill.py` → token-gated `/api/ingest`. Secrets: `INGEST_URL`,
    `INGEST_TOKEN`, + optional API keys. Runs from the **default branch**.
-4. Deployment: **Docker self-host** — see `DEPLOY.md` (runbook) and
-   `DEPLOY_WITH_CLAUDE.md` (paste-able Claude deploy prompt).
+4. Deployment: **Vercel + Neon** — see `DEPLOY_VERCEL.md` (runbook). A Docker
+   Compose stack (`docker-compose.prod.yml`) remains as a self-host fallback.
 5. `README.md`: local setup, running scrapers, the shared admin login, and the
    `.mil`/`.gov` data-source list.
 
@@ -570,7 +570,7 @@ Phase 5 — Admin                                                         ✅ Do
 
 Phase 6 — Integration & Deploy                                          ✅ Done
   [x] GitHub Actions scrape schedule (backfill.py → token-gated ingest)
-  [x] Docker self-host config (docker-compose.prod.yml, DEPLOY.md)
+  [x] Vercel + Neon deploy (DEPLOY_VERCEL.md); Docker Compose self-host fallback
   [x] End-to-end smoke tests (validated against a live prod stack)
 
 Post-MVP                                                                ✅ Done
@@ -619,7 +619,7 @@ Post-MVP                                                                ✅ Done
 ## Key Decisions
 
 1. **Project name / branding** — ⏳ still open, needed before public launch
-2. **Hosting** — ✅ resolved: Vercel + Neon Postgres (`DEPLOY_VERCEL.md`); Docker self-host remains as a fallback (`DEPLOY.md`)
+2. **Hosting** — ✅ resolved: Vercel + Neon Postgres (`DEPLOY_VERCEL.md`); a Docker Compose stack (`docker-compose.prod.yml`) remains as a self-host fallback
 3. **Admin accounts** — ✅ resolved: one shared credential for the team (per-user auth is a future upgrade)
 4. **Significance scoring** — ✅ resolved: **by known-program match, not money** — 4 if a scraped entry maps to a curated program (`scrapers/programs.json`), else 2; manual for curated/reviewed entries
 5. **Classification scope** — unclassified only; `.mil`/`.gov` + public-domain DoD sources — no classified sources in the pipeline
@@ -636,5 +636,5 @@ Post-MVP                                                                ✅ Done
 - DVIDS API: https://api.dvidshub.net/
 - Congress.gov API: https://api.congress.gov/
 - Next.js App Router: https://nextjs.org/docs · Prisma: https://www.prisma.io/docs · NextAuth.js: https://next-auth.js.org
-- Runbooks: [DEPLOY.md](./DEPLOY.md) · [DEPLOY_WITH_CLAUDE.md](./DEPLOY_WITH_CLAUDE.md) · [scrapers/README.md](./scrapers/README.md)
+- Runbooks: [DEPLOY_VERCEL.md](./DEPLOY_VERCEL.md) · [scrapers/README.md](./scrapers/README.md)
 - Category color palette: [docs/CATEGORY_COLORS.md](./docs/CATEGORY_COLORS.md) (source of truth `lib/categories.ts`)

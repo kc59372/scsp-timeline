@@ -11,7 +11,7 @@
  *
  * Auth: if INGEST_TOKEN is set, requests must send `Authorization: Bearer <token>`
  * (401 otherwise). When unset, the endpoint is open — fine for local dev, but
- * production MUST set INGEST_TOKEN (see DEPLOY.md).
+ * production MUST set INGEST_TOKEN (see DEPLOY_VERCEL.md).
  */
 import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
