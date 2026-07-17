@@ -96,10 +96,19 @@ export async function POST(req: NextRequest) {
       });
 
       if (existing) {
-        // Known item — refresh its fields but PRESERVE its review decision.
+        // Known item — refresh its fields but PRESERVE admin-curated fields.
         // Re-ingesting must not undo an admin's approve/reject or re-trigger
-        // verification, so entryStatus is intentionally left untouched here.
-        const { entryStatus: _drop, ...updateData } = createData;
+        // verification (entryStatus), nor clobber a curated lifecycle
+        // classification (eventType/category) with the scraper's re-inferred
+        // guess — those are set on first ingest and owned by reviewers
+        // thereafter. Everything else (sources, cleaned copy, dates) still
+        // refreshes so scraper improvements flow through.
+        const {
+          entryStatus: _dropStatus,
+          eventType: _dropType,
+          category: _dropCategory,
+          ...updateData
+        } = createData;
         await prisma.milestone.update({ where: { dedupeHash }, data: updateData });
         skipped++;
       } else {
