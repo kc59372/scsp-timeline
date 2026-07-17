@@ -165,7 +165,7 @@ export function AdoptionVelocityChart({ milestones }: { milestones: Milestone[] 
                   className={`w-full rounded-t transition-all hover:opacity-90 ${
                     isActive ? "ring-2 ring-accent ring-offset-1 ring-offset-panel" : ""
                   }`}
-                  style={{ height: `${h}px`, backgroundColor: "#0A3161" }}
+                  style={{ height: `${h}px`, backgroundImage: "linear-gradient(to top, #851432, #B31942)" }}
                 />
               ) : (
                 <div className="w-full" style={{ height: "0px" }} />

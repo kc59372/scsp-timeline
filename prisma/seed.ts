@@ -137,14 +137,14 @@ const programs: Prisma.ProgramCreateInput[] = [
     },
   },
   {
-    slug: "genai-mil-arctic-bridge",
-    name: "GenAI.mil (Exercise Arctic Bridge)",
+    slug: "genai-mil",
+    name: "GenAI.mil",
     actor: "USAF 732nd Air Mobility Squadron",
     country: "US",
     category: "TRAINING_SIMULATION",
     subcategory: "Generative AI / wargaming",
     systemStatus: "FIELDED",
-    significance: 3,
+    significance: 4,
     description:
       "A custom generative-AI platform (GenAI.mil, powered by Gemini) used by " +
       "the 732nd Air Mobility Squadron to draft complex tabletop-exercise " +
