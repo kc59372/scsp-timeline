@@ -20,6 +20,7 @@
     { "slug": "genai-mil", "name": "GenAI.mil", "category": "TRAINING_SIMULATION", "aliases": ["genai.mil", "genai mil"], "acronyms": [] },
     { "slug": "advana", "name": "Advana (War Data Platform)", "category": "COMMAND_CONTROL", "aliases": ["advana", "war data platform"], "acronyms": [] },
     { "slug": "swarm-forge", "name": "Swarm Forge", "category": "UNMANNED_SYSTEMS", "aliases": ["swarm forge", "swarmforge"], "acronyms": [] },
+    { "slug": "offset", "name": "OFFSET (Offensive Swarm-Enabled Tactics)", "category": "UNMANNED_SYSTEMS", "aliases": ["offensive swarm-enabled tactics", "offensive swarm enabled tactics"], "acronyms": ["OFFSET"] },
     { "slug": "enders-foundry", "name": "Ender's Foundry", "category": "RESEARCH_DEVELOPMENT", "aliases": ["ender's foundry", "enders foundry"], "acronyms": [] },
     { "slug": "open-arsenal", "name": "Open Arsenal", "category": "RESEARCH_DEVELOPMENT", "aliases": ["open arsenal"], "acronyms": [] },
     { "slug": "defense-autonomous-warfare-group", "name": "Defense Autonomous Warfare Group (DAWG)", "category": "UNMANNED_SYSTEMS", "aliases": ["defense autonomous warfare group"], "acronyms": ["DAWG"] },

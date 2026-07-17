@@ -256,6 +256,45 @@ const programs: Prisma.ProgramCreateInput[] = [
       ],
     },
   },
+  {
+    slug: "offset",
+    name: "OFFSET (Offensive Swarm-Enabled Tactics)",
+    actor: "DARPA (Tactical Technology Office)",
+    country: "US",
+    category: "UNMANNED_SYSTEMS",
+    subcategory: "Drone swarm autonomy",
+    systemStatus: "TESTING",
+    significance: 4,
+    description:
+      "DARPA's OFFSET program developed and field-tested swarm autonomy and " +
+      "human-swarm teaming for small-unit infantry, deploying swarms of up to " +
+      "250 unmanned aircraft and ground systems for complex urban missions. " +
+      "The program is now complete.",
+    events: {
+      create: [
+        {
+          name: "DARPA announces OFFSET (Offensive Swarm-Enabled Tactics)",
+          actor: "DARPA (Tactical Technology Office)",
+          country: "US",
+          category: "UNMANNED_SYSTEMS",
+          eventType: "RD_START",
+          eventDate: ym(2016, 12),
+          devStartDate: ym(2016, 12),
+          systemStatus: "DEVELOPMENT",
+          entryStatus: "APPROVED",
+          description:
+            "DARPA announced the OFFSET program to develop swarm autonomy and " +
+            "human-swarm teaming enabling small-unit infantry to deploy swarms " +
+            "of up to 250 unmanned aircraft and ground systems in urban terrain.",
+          sourceUrl:
+            "https://www.darpa.mil/research/programs/offensive-swarm-enabled-tactics",
+          sourceName: "DARPA: Offensive Swarm-Enabled Tactics (OFFSET)",
+          additionalSources: [],
+          significance: 4,
+        },
+      ],
+    },
+  },
 ];
 
 // ---------------------------------------------------------------------------
