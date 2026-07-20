@@ -8,7 +8,10 @@
  * Query params (GET):
  *   ?status=<EntryStatus|all>   admin-only when not APPROVED (default APPROVED)
  *   ?category=<Category enum>   filter by category
- *   ?page / ?pageSize           pagination (pageSize default 500)
+ *   ?page / ?pageSize           pagination (pageSize default 500, capped 1000;
+ *                               pageSize=all returns every match, uncapped —
+ *                               used by the full timeline so its count matches
+ *                               the header's DB-wide total)
  */
 import { NextRequest, NextResponse } from "next/server";
 import { Category, EntryStatus, Prisma } from "@prisma/client";
@@ -49,8 +52,12 @@ export async function GET(req: NextRequest) {
     where.category = category as Category;
   }
 
+  const pageSizeParam = searchParams.get("pageSize");
+  const fetchAll = pageSizeParam === "all";
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
-  const pageSize = Math.min(1000, Math.max(1, Number(searchParams.get("pageSize")) || DEFAULT_PAGE_SIZE));
+  const pageSize = fetchAll
+    ? undefined
+    : Math.min(1000, Math.max(1, Number(pageSizeParam) || DEFAULT_PAGE_SIZE));
 
   // Admin review views (anything but the public APPROVED list) surface
   // program-grouped events first, clustered by program name and ordered by
@@ -66,13 +73,13 @@ export async function GET(req: NextRequest) {
       where,
       include: { tags: true, program: true },
       orderBy,
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip: fetchAll ? undefined : (page - 1) * pageSize!,
+      take: fetchAll ? undefined : pageSize,
     }),
     prisma.milestone.count({ where }),
   ]);
 
-  return NextResponse.json({ items, total, page, pageSize });
+  return NextResponse.json({ items, total, page, pageSize: pageSize ?? total });
 }
 
 export async function POST(req: NextRequest) {

@@ -85,7 +85,7 @@ function baseUrl(): string {
 }
 
 export async function fetchMilestones(
-  params: { category?: string; page?: number; pageSize?: number } = {},
+  params: { category?: string; page?: number; pageSize?: number | "all" } = {},
 ): Promise<MilestonesResponse> {
   const qs = new URLSearchParams();
   if (params.category) qs.set("category", params.category);
