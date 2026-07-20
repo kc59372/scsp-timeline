@@ -464,18 +464,27 @@ function SectionBlock({
       </div>
 
       {rows.map((row) => {
-        // A row is "same" if every column's comparable value matches.
+        // Compare each column's comparable value. A row with a single column
+        // can't differ; otherwise it "differs" when the values aren't all equal
+        // (a missing value counts as a difference from a present one).
         const values = columns.map((c, i) => row.cmp(c, metrics[i]));
-        const allSame =
-          values.length > 1 &&
-          values.every((v) => v != null && v === values[0]);
-        const dimmed = highlight && allSame;
+        const comparable = values.length > 1;
+        const allSame = comparable && values.every((v) => v === values[0]);
+        // When highlighting: fade identical rows, and emphasize differing ones
+        // (rows where every column is empty have nothing to highlight).
+        const anyPresent = values.some((v) => v != null);
+        const dimmed = highlight && allSame && anyPresent;
+        const differing = highlight && comparable && !allSame && anyPresent;
 
         return (
           <div key={row.key} className="contents">
             <div
-              className={`sticky left-0 z-10 flex items-center border-b border-edge bg-paper px-4 py-3 font-mono text-[0.7rem] uppercase tracking-wide ${
-                dimmed ? "text-gray-400" : "text-gray-500"
+              className={`sticky left-0 z-10 flex items-center border-b border-edge px-4 py-3 font-mono text-[0.7rem] uppercase tracking-wide ${
+                differing
+                  ? "border-l-2 border-l-accent bg-accent/5 font-semibold text-accent"
+                  : dimmed
+                    ? "bg-paper text-gray-300"
+                    : "bg-paper text-gray-500"
               }`}
             >
               {row.label}
@@ -484,7 +493,11 @@ function SectionBlock({
               <div
                 key={`${row.key}-${i}`}
                 className={`flex items-center border-b border-l border-edge px-4 py-3 text-sm ${
-                  dimmed ? "bg-panel/40 text-gray-400" : "bg-paper text-ink"
+                  differing
+                    ? "bg-accent/5 text-ink"
+                    : dimmed
+                      ? "bg-panel/40 text-gray-300"
+                      : "bg-paper text-ink"
                 }`}
               >
                 {row.render(col, metrics[i])}
