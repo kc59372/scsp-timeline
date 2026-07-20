@@ -194,7 +194,7 @@ const programs: Prisma.ProgramCreateInput[] = [
   },
   {
     slug: "manta-ray-xl-uuv",
-    name: "Northrop Grumman Manta Ray XL-UUV",
+    name: "Manta Ray XL-UUV",
     actor: "Northrop Grumman / DARPA",
     country: "US",
     category: "UNMANNED_SYSTEMS",

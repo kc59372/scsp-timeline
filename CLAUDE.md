@@ -253,7 +253,7 @@ The Database Agent must seed the following verified US entries from the team's d
 |---|---|---|---|---|---|
 | Maven Smart System | Palantir / DoD | TARGETING | Apr 2017 | Dec 2025 / May 2026 | FIELDED |
 | GenAI.mil | USAF 732nd AMS | TRAINING_SIMULATION | Dec 2025 | Jun 2026 | FIELDED |
-| Northrop Grumman MantaRay XL-UUV | Northrop Grumman / DARPA | UNMANNED_SYSTEMS | 2020 | Feb–Mar 2024 (test) | TESTING |
+| Manta Ray XL-UUV | Northrop Grumman / DARPA | UNMANNED_SYSTEMS | 2020 | Feb–Mar 2024 (test) | TESTING |
 
 > Each of these three is seeded as a **`Program`** whose dates become lifecycle
 > **events** (e.g. Maven → `RD_START` 2017 → `AWARD` 2024 → `TEST` 2025 →
