@@ -11,7 +11,9 @@ export default async function TimelinePage({
 }: {
   searchParams: { q?: string };
 }) {
-  const { items, total } = await fetchMilestones();
+  // Fetch every approved milestone (uncapped) so the timeline renders the full
+  // set and its counts match the header's DB-wide total.
+  const { items, total } = await fetchMilestones({ pageSize: "all" });
   const initialSearch = typeof searchParams.q === "string" ? searchParams.q : "";
 
   return (
