@@ -64,11 +64,20 @@ export function TimelineExplorer({
   const filtered = useMemo(() => {
     // AND across whitespace-separated terms; each term must appear somewhere.
     const terms = state.search.toLowerCase().split(/\s+/).filter(Boolean);
+    // Only bound by year once the user narrows past the full 2016–2026 extent, so
+    // the default view still counts approved events dated outside the window
+    // (e.g. the 2014 Third Offset Strategy) — keeping the match count aligned
+    // with the site-wide total. The charts keep their fixed 2016–2026 axis.
+    const boundLo = state.fromYear > MIN_YEAR;
+    const boundHi = state.toYear < MAX_YEAR;
     return indexed
       .filter(({ m, text }) => {
         if (state.category !== "all" && m.category !== state.category) return false;
         const y = primaryYear(m);
-        if (y != null && (y < state.fromYear || y > state.toYear)) return false;
+        if (y != null) {
+          if (boundLo && y < state.fromYear) return false;
+          if (boundHi && y > state.toYear) return false;
+        }
         if (terms.length && !terms.every((t) => text.includes(t))) return false;
         return true;
       })

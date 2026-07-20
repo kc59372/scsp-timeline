@@ -46,22 +46,44 @@ function VelocityLineChart({ milestones }: { milestones: Milestone[] }) {
 
   const max = Math.max(1, ...Array.from(counts.values()));
 
-  // viewBox geometry (padding leaves room for axis labels).
+  // Least-squares linear trend over the per-year counts: `slope` is the average
+  // change in milestones per year (the quantified "adoption velocity").
+  const trend = useMemo(() => {
+    const ys = years.map((yr) => counts.get(yr)!);
+    const n = ys.length;
+    const xbar = (n - 1) / 2;
+    const ybar = ys.reduce((a, b) => a + b, 0) / n;
+    let num = 0;
+    let den = 0;
+    for (let i = 0; i < n; i++) {
+      num += (i - xbar) * (ys[i] - ybar);
+      den += (i - xbar) ** 2;
+    }
+    const slope = den === 0 ? 0 : num / den;
+    return { slope, intercept: ybar - slope * xbar };
+  }, [counts, years]);
+
+  // viewBox geometry (padding leaves room for axis labels + the pop-up boxes).
   const W = 640;
-  const H = 240;
+  const H = 260;
   const padL = 34;
   const padR = 16;
-  const padT = 18;
+  const padT = 30;
   const padB = 30;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
 
   const x = (i: number) => padL + (years.length === 1 ? 0 : (i / (years.length - 1)) * plotW);
   const y = (c: number) => padT + plotH - (c / max) * plotH;
+  const clampY = (c: number) => Math.min(padT + plotH, Math.max(padT, y(c)));
 
   const points = years.map((yr, i) => ({ yr, i, c: counts.get(yr)!, cx: x(i), cy: y(counts.get(yr)!) }));
   const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.cx} ${p.cy}`).join(" ");
   const areaPath = `${linePath} L ${x(years.length - 1)} ${padT + plotH} L ${padL} ${padT + plotH} Z`;
+
+  // Trend line endpoints (clamped into the plot so a steep fit stays on-canvas).
+  const trendY0 = clampY(trend.intercept);
+  const trendY1 = clampY(trend.intercept + trend.slope * (years.length - 1));
 
   // Horizontal gridlines at a few round-ish values.
   const ticks = 4;
@@ -69,12 +91,17 @@ function VelocityLineChart({ milestones }: { milestones: Milestone[] }) {
 
   return (
     <div className="rounded-lg border border-edge bg-panel p-5">
-      <div className="mb-1 flex items-baseline justify-between">
+      <div className="mb-1 flex items-baseline justify-between gap-3">
         <span className="font-mono text-xs uppercase tracking-[0.1em] text-signal">Adoption Velocity</span>
-        <span className="font-mono text-[0.65rem] text-gray-500">milestones per year</span>
+        <span className="shrink-0 font-mono text-[0.7rem] font-semibold tabular-nums text-ink">
+          {trend.slope >= 0 ? "▲ +" : "▼ "}
+          {trend.slope.toFixed(1)}
+          <span className="font-normal text-gray-500"> / yr</span>
+        </span>
       </div>
       <p className="mb-4 text-sm text-gray-600">
-        Tracked US military AI milestones per year — the pace of adoption over time.
+        Tracked US military AI milestones per year — the pace of adoption over time. The dashed
+        line is the least-squares trend; its slope is the average change per year.
       </p>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Milestones per year, 2016–2026">
         <defs>
@@ -98,13 +125,40 @@ function VelocityLineChart({ milestones }: { milestones: Milestone[] }) {
         <path d={areaPath} fill="url(#velocityFill)" />
         <path d={linePath} fill="none" stroke="#B31942" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
 
+        {/* least-squares trend line */}
+        <line
+          x1={x(0)}
+          y1={trendY0}
+          x2={x(years.length - 1)}
+          y2={trendY1}
+          stroke="#00334E"
+          strokeWidth="1.5"
+          strokeDasharray="6 4"
+          opacity="0.55"
+        />
+
         {/* points + x labels + hover targets */}
-        {points.map((p) => (
+        {points.map((p) => {
+          // Tooltip box geometry — larger, and kept inside the viewBox so the
+          // top-most point's box isn't clipped (flip below when there's no room
+          // above; clamp x to the left/right edges).
+          const bw = 56;
+          const bh = 26;
+          const above = p.cy - (bh + 10) >= 0;
+          const by = above ? p.cy - (bh + 8) : p.cy + 8;
+          const bx = Math.min(Math.max(p.cx - bw / 2, 2), W - bw - 2);
+          return (
           <g key={p.yr}>
             {hover === p.yr && p.c > 0 && (
               <g>
-                <rect x={p.cx - 20} y={p.cy - 26} width="40" height="18" rx="3" fill="#00334E" />
-                <text x={p.cx} y={p.cy - 13} textAnchor="middle" className="fill-white font-mono" style={{ fontSize: "10px", fontWeight: 700 }}>
+                <rect x={bx} y={by} width={bw} height={bh} rx="4" fill="#00334E" />
+                <text
+                  x={bx + bw / 2}
+                  y={by + bh / 2 + 5}
+                  textAnchor="middle"
+                  className="fill-white font-mono"
+                  style={{ fontSize: "15px", fontWeight: 700 }}
+                >
                   {p.c}
                 </text>
               </g>
@@ -131,7 +185,8 @@ function VelocityLineChart({ milestones }: { milestones: Milestone[] }) {
               onMouseLeave={() => setHover(null)}
             />
           </g>
-        ))}
+          );
+        })}
       </svg>
     </div>
   );
