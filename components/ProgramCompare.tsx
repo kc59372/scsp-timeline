@@ -7,7 +7,6 @@ import {
   categoryColor,
   categoryLabel,
   pillStyle,
-  withAlpha,
 } from "@/lib/categories";
 import { EVENT_TYPES, eventTypeLabel } from "@/lib/events";
 import {
@@ -110,22 +109,6 @@ function computeMetrics(events: Milestone[]): Metrics {
   };
 }
 
-/** Five-dot significance meter. */
-function Significance({ value, color }: { value: number; color: string }) {
-  const n = Math.max(0, Math.min(5, value));
-  return (
-    <span className="inline-flex items-center gap-1" title={`Significance ${n}/5`}>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <span
-          key={i}
-          className="h-2 w-2 rounded-full"
-          style={{ backgroundColor: i < n ? color : withAlpha("#7B7B7B", 0.22) }}
-        />
-      ))}
-    </span>
-  );
-}
-
 const EMPTY = <span className="text-gray-400">—</span>;
 
 /** A single comparison row spec. */
@@ -175,17 +158,6 @@ const OVERVIEW_ROWS: Row[] = [
     label: "Focus Area",
     cmp: (c) => c.program.subcategory,
     render: (c) => c.program.subcategory || EMPTY,
-  },
-  {
-    key: "significance",
-    label: "Significance",
-    cmp: (c) => c.program.significance,
-    render: (c) => (
-      <Significance
-        value={c.program.significance}
-        color={categoryColor(c.program.category)}
-      />
-    ),
   },
 ];
 

@@ -13,9 +13,22 @@ export default async function ComparePage() {
   // side (no per-program fetch), matching the homepage's program grouping.
   const { items, total } = await fetchMilestones({ pageSize: 1000 });
 
+  // Count distinct sources across a program's events (sourceUrl +
+  // additionalSources), matching ProgramCompare's "Distinct Sources" metric.
+  const distinctSources = (events: ProgramEntry["events"]): number => {
+    const srcSet = new Set<string>();
+    for (const e of events) {
+      if (e.sourceUrl) srcSet.add(e.sourceUrl);
+      for (const s of e.additionalSources ?? []) srcSet.add(s);
+    }
+    return srcSet.size;
+  };
+
   const programs: CompareProgram[] = (
     buildTimelineEntries(items).filter((e) => e.kind === "program") as ProgramEntry[]
   )
+    // Only surface well-sourced programs (more than 2 distinct sources).
+    .filter((e) => distinctSources(e.events) > 2)
     .sort(
       (a, b) =>
         b.program.significance - a.program.significance ||
@@ -46,8 +59,9 @@ export default async function ComparePage() {
           ) : (
             <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-lg border border-dashed border-edge bg-panel p-12 text-center">
               <p className="max-w-md text-sm leading-relaxed text-gray-600">
-                At least two program lifecycle tracks are needed to compare.
-                Approve more scraped events into programs to unlock this view.
+                At least two program lifecycle tracks with more than two distinct
+                sources each are needed to compare. Approve more scraped events
+                into programs to unlock this view.
               </p>
             </div>
           )}

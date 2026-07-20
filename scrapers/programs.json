@@ -12,7 +12,7 @@
     { "slug": "thunderforge", "name": "Thunderforge", "category": "COMMAND_CONTROL", "aliases": ["thunderforge"], "acronyms": [] },
     { "slug": "collaborative-combat-aircraft", "name": "Collaborative Combat Aircraft (CCA)", "category": "UNMANNED_SYSTEMS", "aliases": ["collaborative combat aircraft", "yfq-42a", "yfq-44a", "yfq-42", "yfq-44"], "acronyms": [] },
     { "slug": "skyborg", "name": "Skyborg", "category": "UNMANNED_SYSTEMS", "aliases": ["skyborg"], "acronyms": [] },
-    { "slug": "manta-ray-xl-uuv", "name": "Northrop Grumman Manta Ray XL-UUV", "category": "UNMANNED_SYSTEMS", "aliases": ["manta ray"], "acronyms": [] },
+    { "slug": "manta-ray-xl-uuv", "name": "Manta Ray XL-UUV", "category": "UNMANNED_SYSTEMS", "aliases": ["manta ray"], "acronyms": [] },
     { "slug": "orca-xluuv", "name": "Orca XLUUV", "category": "UNMANNED_SYSTEMS", "aliases": ["orca xluuv", "orca extra-large", "orca extra large"], "acronyms": [] },
     { "slug": "knifefish-uuv", "name": "Knifefish UUV", "category": "UNMANNED_SYSTEMS", "aliases": ["knifefish"], "acronyms": [] },
     { "slug": "sea-hunter", "name": "Sea Hunter USV", "category": "UNMANNED_SYSTEMS", "aliases": ["sea hunter"], "acronyms": [] },
