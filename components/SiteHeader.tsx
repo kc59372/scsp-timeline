@@ -178,8 +178,14 @@ export async function SiteHeader({ total }: { total?: number }) {
         </div>
 
         {/* Translucent timeline graphic (desktop only) */}
-        <div className="hidden shrink-0 lg:block">
+        <div className="hidden shrink-0 flex-col items-center lg:flex">
           <TimelineGraphic className="h-48 w-64 xl:h-56 xl:w-72" />
+          <p
+            className="mt-2 text-center font-mono text-[0.7rem] uppercase tracking-[0.18em]"
+            style={{ color: "rgba(240,240,240,0.6)" }}
+          >
+            By Kaci McBrayer · Amy Velnosky · Nicolas Zarbin
+          </p>
         </div>
       </div>
     </header>
