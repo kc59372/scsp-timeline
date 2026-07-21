@@ -470,27 +470,31 @@ function SectionBlock({
       </div>
 
       {rows.map((row) => {
-        // Compare each column's comparable value. A row with a single column
-        // can't differ; otherwise it "differs" when the values aren't all equal
-        // (a missing value counts as a difference from a present one).
+        // "Odd man out" highlighting: tint only the cell(s) whose value is
+        // rarer than the row's most common value — the deviation stands out
+        // while the agreeing cells stay plain. A missing value counts as its
+        // own value, so the lone program with (or without) a stage is flagged.
+        // When no value repeats at all (every column differs, incl. the
+        // 2-column case), there's no consensus, so all cells are "odd".
         const values = columns.map((c, i) => row.cmp(c, metrics[i]));
         const comparable = values.length > 1;
-        const allSame = comparable && values.every((v) => v === values[0]);
-        // When highlighting: fade identical rows, and emphasize differing ones
-        // (rows where every column is empty have nothing to highlight).
-        const anyPresent = values.some((v) => v != null);
-        const dimmed = highlight && allSame && anyPresent;
-        const differing = highlight && comparable && !allSame && anyPresent;
+        const freq = new Map<string | number | null, number>();
+        for (const v of values) freq.set(v, (freq.get(v) ?? 0) + 1);
+        const maxFreq = values.reduce<number>(
+          (m, v) => Math.max(m, freq.get(v) ?? 0),
+          0,
+        );
+        const isOdd = (i: number) =>
+          highlight &&
+          comparable &&
+          (maxFreq === 1 || (freq.get(values[i]) ?? 0) < maxFreq);
+        const rowHasOdd = values.some((_, i) => isOdd(i));
 
         return (
           <div key={row.key} className="contents">
             <div
-              className={`sticky left-0 z-10 flex items-center border-b border-edge px-4 py-3 font-mono text-[0.7rem] uppercase tracking-wide ${
-                differing
-                  ? "border-l-2 border-l-accent bg-accent/5 font-semibold text-accent"
-                  : dimmed
-                    ? "bg-paper text-gray-300"
-                    : "bg-paper text-gray-500"
+              className={`sticky left-0 z-10 flex items-center border-b border-edge px-4 py-3 font-mono text-[0.7rem] uppercase tracking-wide bg-paper ${
+                rowHasOdd ? "font-semibold text-accent" : "text-gray-500"
               }`}
             >
               {row.label}
@@ -498,12 +502,10 @@ function SectionBlock({
             {columns.map((col, i) => (
               <div
                 key={`${row.key}-${i}`}
-                className={`flex items-center border-b border-l border-edge px-4 py-3 text-sm ${
-                  differing
-                    ? "bg-accent/5 text-ink"
-                    : dimmed
-                      ? "bg-panel/40 text-gray-300"
-                      : "bg-paper text-ink"
+                className={`flex items-center border-b px-4 py-3 text-sm ${
+                  isOdd(i)
+                    ? "border-l-2 border-l-accent bg-accent/10 font-medium text-ink"
+                    : "border-l border-edge bg-paper text-ink"
                 }`}
               >
                 {row.render(col, metrics[i])}
