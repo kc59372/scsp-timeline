@@ -177,7 +177,9 @@ const TIMELINE_ROWS: Row[] = [
   {
     key: "span",
     label: "Time Span",
-    cmp: (_c, m) => m.spanYears,
+    // Compare on the displayed span (e.g. "2018–2022"), not the year count —
+    // two different spans of equal length must still read as a difference.
+    cmp: (_c, m) => m.span,
     render: (_c, m) =>
       m.span ? (
         <span>
@@ -220,8 +222,10 @@ const TIMELINE_ROWS: Row[] = [
 const PROCUREMENT_ROWS: Row[] = [
   {
     key: "total",
+    // Compare on the displayed string, not the raw USD — two values that render
+    // identically (e.g. both "$1.44B") must not read as a difference.
     label: "Total Contract Value",
-    cmp: (_c, m) => m.totalValue,
+    cmp: (_c, m) => (m.totalValue > 0 ? formatUsd(m.totalValue) : null),
     render: (_c, m) =>
       m.totalValue > 0 ? (
         <span className="font-semibold">{formatUsd(m.totalValue)}</span>
@@ -232,7 +236,7 @@ const PROCUREMENT_ROWS: Row[] = [
   {
     key: "largest",
     label: "Largest Single Award",
-    cmp: (_c, m) => m.largestValue,
+    cmp: (_c, m) => (m.largestValue > 0 ? formatUsd(m.largestValue) : null),
     render: (_c, m) => (m.largestValue > 0 ? formatUsd(m.largestValue) : EMPTY),
   },
 ];
@@ -249,7 +253,9 @@ const SOURCING_ROWS: Row[] = [
 const STAGE_DATE_ROWS: Row[] = STAGE_ROWS.map((s) => ({
   key: `stage-${s.type}`,
   label: s.label,
-  cmp: (_c: CompareProgram, m: Metrics) => m.stageDate(s.type),
+  // Compare on the rendered month/year, not the raw ISO — two dates in the
+  // same month render identically and must not read as a difference.
+  cmp: (_c: CompareProgram, m: Metrics) => formatMilestoneDate(m.stageDate(s.type)),
   render: (_c: CompareProgram, m: Metrics) => {
     const iso = m.stageDate(s.type);
     return iso ? formatMilestoneDate(iso) : EMPTY;
