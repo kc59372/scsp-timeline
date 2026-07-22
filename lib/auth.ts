@@ -24,6 +24,10 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        // Admin is fully off unless explicitly enabled — when the dashboard is
+        // hidden (ADMIN_ENABLED != "true") no session can be minted, even if the
+        // login endpoint is probed directly with the right password.
+        if (process.env.ADMIN_ENABLED !== "true") return null;
         const adminEmail = process.env.ADMIN_EMAIL;
         const adminHash = process.env.ADMIN_PASSWORD_HASH;
         if (!adminEmail || !adminHash) return null; // not configured
@@ -40,7 +44,10 @@ export const authOptions: NextAuthOptions = {
   ],
 };
 
-/** Returns the admin session, or null if unauthenticated. For API gating. */
+/** Returns the admin session, or null if unauthenticated. For API gating.
+ * Short-circuits to null when admin is disabled, so no admin-gated route is
+ * reachable while the dashboard is hidden — regardless of any lingering cookie. */
 export async function requireAdmin(): Promise<Session | null> {
+  if (process.env.ADMIN_ENABLED !== "true") return null;
   return getServerSession(authOptions);
 }
