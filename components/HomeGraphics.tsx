@@ -102,7 +102,6 @@ function QuarterlyBreakdown({ milestones }: { milestones: Milestone[] }) {
         m.eventType === "DEPLOYMENT" ||
         m.systemStatus === "FIELDED",
     ).length;
-    const policy = q.filter((m) => m.category === "POLICY_DIRECTIVE").length;
 
     const takeaways: string[] = [];
     takeaways.push(`${total} tracked AI milestone${total === 1 ? "" : "s"} dated in Q2 2026.`);
@@ -121,9 +120,6 @@ function QuarterlyBreakdown({ milestones }: { milestones: Milestone[] }) {
     }
     if (fielded > 0) {
       takeaways.push(`${fielded} system${fielded === 1 ? "" : "s"} reached fielding or deployment.`);
-    }
-    if (policy > 0) {
-      takeaways.push(`${policy} policy / directive action${policy === 1 ? "" : "s"} recorded.`);
     }
 
     // Notable trends — compare against the prior quarter (2026 Q1).
@@ -186,7 +182,7 @@ function QuarterlyBreakdown({ milestones }: { milestones: Milestone[] }) {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2">
           <div>
-            <h4 className="mb-2 font-mono text-[0.7rem] uppercase tracking-[0.1em] text-ink">Big Takeaways</h4>
+            <h4 className="mb-2 font-mono text-[0.7rem] uppercase tracking-[0.1em] text-ink">Takeaways</h4>
             <ul className="space-y-2">
               {takeaways.map((t, i) => (
                 <li key={i} className="flex gap-2.5 text-sm leading-snug text-gray-700">
