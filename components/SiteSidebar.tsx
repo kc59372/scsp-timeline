@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 const NAV = [
-  { href: "/", label: "Home", hint: "Overview, recent events & projects" },
+  { href: "/", label: "Home", hint: "See overview, recent events & projects" },
   { href: "/timeline", label: "Full Timeline", hint: "Filter & explore every milestone" },
   { href: "/compare", label: "Comparison Tool", hint: "Compare programs side by side" },
 ] as const;
