@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { Milestone } from "@/lib/milestones";
-import { primaryDateIso, primaryYear, formatUsd, displayName } from "@/lib/format";
+import { primaryDateIso, primaryYear, formatUsd, formatMilestoneDate, displayName } from "@/lib/format";
 import { categoryColor, categoryLabel, compareCategories } from "@/lib/categories";
 import { AdoptionVelocityChart } from "./AdoptionVelocityChart";
 
@@ -63,13 +64,28 @@ interface Trend {
  * so it stays accurate as new data lands.
  */
 function QuarterlyBreakdown({ milestones }: { milestones: Milestone[] }) {
-  const { takeaways, trends, total } = useMemo(() => {
+  const { takeaways, trends, topEvents, total } = useMemo(() => {
     const q = inQuarter(milestones, QUARTER_YEAR, QUARTER_INDEX);
     const total = q.length;
-    if (total === 0) return { takeaways: [] as string[], trends: [] as Trend[], total };
+    if (total === 0)
+      return { takeaways: [] as string[], trends: [] as Trend[], topEvents: [] as Milestone[], total };
 
     const cats = countByCategory(q);
     const top = cats[0];
+
+    // Top 3 events of the quarter — most significant first, breaking ties by
+    // contract value (bigger first) then recency of the primary date.
+    const topEvents = [...q]
+      .sort((a, b) => {
+        if (b.significance !== a.significance) return b.significance - a.significance;
+        const av = a.contractValue ?? -1;
+        const bv = b.contractValue ?? -1;
+        if (bv !== av) return bv - av;
+        const ad = primaryDateIso(a) ?? "";
+        const bd = primaryDateIso(b) ?? "";
+        return bd.localeCompare(ad);
+      })
+      .slice(0, 3);
 
     // Contract awards this quarter (events carrying a dollar value).
     const awards = q.filter((m) => m.contractValue != null);
@@ -152,7 +168,7 @@ function QuarterlyBreakdown({ milestones }: { milestones: Milestone[] }) {
       });
     }
 
-    return { takeaways, trends, total };
+    return { takeaways, trends, topEvents, total };
   }, [milestones]);
 
   return (
@@ -199,6 +215,45 @@ function QuarterlyBreakdown({ milestones }: { milestones: Milestone[] }) {
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {topEvents.length > 0 && (
+            <div className="border-t border-edge pt-4 sm:col-span-2">
+              <h4 className="mb-2 font-mono text-[0.7rem] uppercase tracking-[0.1em] text-ink">Top Events</h4>
+              <ol className="space-y-2">
+                {topEvents.map((m, i) => {
+                  const dateLabel = formatMilestoneDate(primaryDateIso(m));
+                  const value = formatUsd(m.contractValue);
+                  return (
+                    <li key={m.id}>
+                      <Link
+                        href={`/system/${m.id}`}
+                        className="group flex items-start gap-3 rounded-md p-2 -mx-2 transition-colors hover:bg-raise"
+                      >
+                        <span className="mt-0.5 shrink-0 font-mono text-sm font-bold tabular-nums text-gray-400">
+                          {i + 1}
+                        </span>
+                        <span
+                          className="mt-1.5 h-2 w-2 shrink-0 rounded-sm"
+                          style={{ backgroundColor: categoryColor(m.category) }}
+                          aria-hidden
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-ink group-hover:text-signal">
+                            {displayName(m)}
+                          </span>
+                          <span className="block truncate font-mono text-[0.7rem] text-gray-500">
+                            {categoryLabel(m.category)}
+                            {dateLabel ? ` · ${dateLabel}` : ""}
+                            {value ? ` · ${value}` : ""}
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ol>
             </div>
           )}
         </div>
