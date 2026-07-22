@@ -12,6 +12,7 @@ import { cleanText } from "./clean";
 // procurement events) passes through untouched.
 const ACTOR_LABELS: Record<string, string> = {
   "af.mil News": "Air Force",
+  "army.mil News": "Army",
   "DoD News (defense.gov)": "DoD",
   "DARPA News": "DARPA",
   "Space Force News": "Space Force",
