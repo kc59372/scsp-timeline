@@ -34,11 +34,24 @@ const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
 ];
 
-const nextConfig = {
-  reactStrictMode: true,
-  async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
-  },
-};
+// STATIC_EXPORT=1 builds a flat-HTML site (next export) with no server/DB —
+// public pages read data/snapshot.json at build time (see lib/snapshot.ts).
+// Custom headers/redirects and API routes aren't supported by static export, so
+// they're omitted in that mode (scripts/build-static.sh sets aside api/admin/
+// middleware); the static host applies its own security headers instead.
+const staticExport = process.env.STATIC_EXPORT === "1";
+
+const nextConfig = staticExport
+  ? {
+      reactStrictMode: true,
+      output: "export",
+      images: { unoptimized: true },
+    }
+  : {
+      reactStrictMode: true,
+      async headers() {
+        return [{ source: "/:path*", headers: securityHeaders }];
+      },
+    };
 
 export default nextConfig;

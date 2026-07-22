@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { fetchMilestone, type Milestone } from "@/lib/milestones";
+import type { Milestone } from "@/lib/milestones";
+import { loadMilestone, staticMilestoneParams } from "@/lib/pageData";
 import { categoryLabel, pillStyle } from "@/lib/categories";
 import { eventTypeLabel } from "@/lib/events";
 import { formatMilestoneDate, formatUsd, displayName, displayActor, displayDescription } from "@/lib/format";
@@ -16,8 +17,12 @@ function Field({ label, value }: { label: string; value: string | null | undefin
   );
 }
 
+// Live app: returns [] → route stays on-demand dynamic. Static export: one
+// pre-rendered HTML file per milestone.
+export const generateStaticParams = staticMilestoneParams;
+
 export default async function SystemProfile({ params }: { params: { id: string } }) {
-  const m: Milestone | null = await fetchMilestone(params.id);
+  const m: Milestone | null = await loadMilestone(params.id);
   if (!m) notFound();
 
   return (

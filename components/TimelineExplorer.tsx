@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Milestone } from "@/lib/milestones";
 import { compareCategories } from "@/lib/categories";
 import { primaryYear } from "@/lib/format";
@@ -49,6 +49,13 @@ export function TimelineExplorer({
     fromYear: MIN_YEAR,
     toYear: MAX_YEAR,
   });
+
+  // Hydrate the search box from the URL's `?q=` on mount. In the static export
+  // there are no server-side searchParams, so deep links are applied here.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) setState((s) => (s.search ? s : { ...s, search: q }));
+  }, []);
 
   const availableCategories = useMemo(
     () => Array.from(new Set(initialData.map((m) => m.category))).sort(compareCategories),
