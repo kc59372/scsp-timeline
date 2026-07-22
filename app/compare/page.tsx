@@ -1,4 +1,4 @@
-import { fetchMilestones } from "@/lib/milestones";
+import { loadMilestones } from "@/lib/pageData";
 import { buildTimelineEntries, type ProgramEntry } from "@/lib/timeline";
 import { SiteSidebar } from "@/components/SiteSidebar";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -11,7 +11,7 @@ export const metadata = {
 export default async function ComparePage() {
   // One approved-milestone pull rebuilds every program lifecycle track client-
   // side (no per-program fetch), matching the homepage's program grouping.
-  const { items, total } = await fetchMilestones({ pageSize: "all" });
+  const { items, total } = await loadMilestones({ pageSize: "all" });
 
   // Count distinct sources across a program's events (sourceUrl +
   // additionalSources), matching ProgramCompare's "Distinct Sources" metric.

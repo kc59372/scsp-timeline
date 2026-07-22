@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { fetchProgram } from "@/lib/milestones";
+import { loadProgram, staticProgramParams } from "@/lib/pageData";
 import { categoryLabel, pillStyle, dotStyle, textStyle } from "@/lib/categories";
 import { eventTypeLabel } from "@/lib/events";
 import { orderEvents } from "@/lib/timeline";
 import { formatMilestoneDate, primaryDateIso, formatUsd, displayActor, displayDescription } from "@/lib/format";
 
+// Live app: returns [] → route stays on-demand dynamic. Static export: one
+// pre-rendered HTML file per program lifecycle.
+export const generateStaticParams = staticProgramParams;
+
 export default async function ProgramProfile({ params }: { params: { id: string } }) {
-  const program = await fetchProgram(params.id);
+  const program = await loadProgram(params.id);
   if (!program) notFound();
 
   const events = orderEvents(program.events);

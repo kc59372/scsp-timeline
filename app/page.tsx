@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { fetchMilestones } from "@/lib/milestones";
+import { loadMilestones } from "@/lib/pageData";
 import { buildTimelineEntries, type ProgramEntry } from "@/lib/timeline";
 import { primaryDateIso } from "@/lib/format";
 import { HomeGraphics } from "@/components/HomeGraphics";
@@ -15,7 +15,7 @@ export const metadata = {
 export default async function Home() {
   // Fetch every approved milestone (uncapped) so the graphics match the full
   // timeline and the header's DB-wide total.
-  const { items, total } = await fetchMilestones({ pageSize: "all" });
+  const { items, total } = await loadMilestones({ pageSize: "all" });
 
   // Recent events: latest-dated standalone events (programs get their own section).
   const recent = [...items]
