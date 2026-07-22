@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Milestone } from "@/lib/milestones";
-import { primaryDateIso, primaryYear } from "@/lib/format";
+import { primaryDateIso, primaryYear, formatUsd, displayName } from "@/lib/format";
 import { categoryColor, categoryLabel, compareCategories } from "@/lib/categories";
 import { AdoptionVelocityChart } from "./AdoptionVelocityChart";
 
@@ -31,92 +31,176 @@ export function HomeGraphics({ milestones }: { milestones: Milestone[] }) {
   );
 }
 
+/** Milestones whose primary date falls in the given calendar quarter. */
+function inQuarter(milestones: Milestone[], year: number, qIndex: number): Milestone[] {
+  return milestones.filter((m) => {
+    const iso = primaryDateIso(m);
+    if (!iso) return false;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return false;
+    return d.getUTCFullYear() === year && Math.floor(d.getUTCMonth() / 3) === qIndex;
+  });
+}
+
+/** Count milestones per category, sorted by count (ties broken by category order). */
+function countByCategory(milestones: Milestone[]): Slice[] {
+  const byCat = new Map<string, number>();
+  for (const m of milestones) byCat.set(m.category, (byCat.get(m.category) ?? 0) + 1);
+  return Array.from(byCat.entries())
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count || compareCategories(a.category, b.category));
+}
+
+interface Trend {
+  dir: "up" | "down" | "flat";
+  text: string;
+}
+
 /**
- * Spotlight card: category breakdown of milestones dated in 2026 Q2 (Apr–Jun) —
- * the current reporting quarter. Mirrors CategoryShareDonut but filters the set
- * to the single quarter first.
+ * Spotlight card: a plain-language summary of the quarter (2026 Q2) — bulleted
+ * big takeaways plus notable trends, all derived from the milestone data (and
+ * compared against the prior quarter for direction) rather than hand-written,
+ * so it stays accurate as new data lands.
  */
 function QuarterlyBreakdown({ milestones }: { milestones: Milestone[] }) {
-  const { slices, total } = useMemo(() => {
-    const byCat = new Map<string, number>();
-    for (const m of milestones) {
-      const iso = primaryDateIso(m);
-      if (!iso) continue;
-      const d = new Date(iso);
-      if (Number.isNaN(d.getTime())) continue;
-      if (d.getUTCFullYear() !== QUARTER_YEAR) continue;
-      if (Math.floor(d.getUTCMonth() / 3) !== QUARTER_INDEX) continue;
-      byCat.set(m.category, (byCat.get(m.category) ?? 0) + 1);
-    }
-    const slices: Slice[] = Array.from(byCat.entries())
-      .map(([category, count]) => ({ category, count }))
-      .sort((a, b) => b.count - a.count || compareCategories(a.category, b.category));
-    return { slices, total: slices.reduce((sum, s) => sum + s.count, 0) };
-  }, [milestones]);
+  const { takeaways, trends, total } = useMemo(() => {
+    const q = inQuarter(milestones, QUARTER_YEAR, QUARTER_INDEX);
+    const total = q.length;
+    if (total === 0) return { takeaways: [] as string[], trends: [] as Trend[], total };
 
-  const R = 42;
-  const C = 2 * Math.PI * R;
-  const GAP = slices.length > 1 ? 3 : 0;
-  let offset = 0;
+    const cats = countByCategory(q);
+    const top = cats[0];
+
+    // Contract awards this quarter (events carrying a dollar value).
+    const awards = q.filter((m) => m.contractValue != null);
+    const totalValue = awards.reduce((sum, m) => sum + (m.contractValue ?? 0), 0);
+    const biggest = awards.reduce<Milestone | null>(
+      (best, m) => (best == null || (m.contractValue ?? 0) > (best.contractValue ?? 0) ? m : best),
+      null,
+    );
+
+    // Systems reaching the field this quarter.
+    const fielded = q.filter(
+      (m) =>
+        m.eventType === "FIELDING" ||
+        m.eventType === "DEPLOYMENT" ||
+        m.systemStatus === "FIELDED",
+    ).length;
+    const policy = q.filter((m) => m.category === "POLICY_DIRECTIVE").length;
+
+    const takeaways: string[] = [];
+    takeaways.push(`${total} tracked AI milestone${total === 1 ? "" : "s"} dated in Q2 2026.`);
+    if (top) {
+      takeaways.push(
+        `${categoryLabel(top.category)} leads the quarter with ${top.count} of ${total} events (${Math.round((top.count / total) * 100)}%).`,
+      );
+    }
+    if (awards.length > 0) {
+      takeaways.push(
+        `${awards.length} contract award${awards.length === 1 ? "" : "s"} totaling ${formatUsd(totalValue)} in obligated value.`,
+      );
+    }
+    if (biggest && biggest.contractValue != null) {
+      takeaways.push(`Largest award: ${displayName(biggest)} (${formatUsd(biggest.contractValue)}).`);
+    }
+    if (fielded > 0) {
+      takeaways.push(`${fielded} system${fielded === 1 ? "" : "s"} reached fielding or deployment.`);
+    }
+    if (policy > 0) {
+      takeaways.push(`${policy} policy / directive action${policy === 1 ? "" : "s"} recorded.`);
+    }
+
+    // Notable trends — compare against the prior quarter (2026 Q1).
+    const prevQIndex = (QUARTER_INDEX + 3) % 4;
+    const prevYear = prevQIndex === 3 ? QUARTER_YEAR - 1 : QUARTER_YEAR;
+    const prev = inQuarter(milestones, prevYear, prevQIndex);
+    const prevLabel = `Q${prevQIndex + 1} ${prevYear}`;
+
+    const trends: Trend[] = [];
+    const delta = total - prev.length;
+    if (prev.length === 0) {
+      trends.push({ dir: "up", text: `New activity this quarter — no tracked milestones in ${prevLabel}.` });
+    } else {
+      const pct = Math.round((delta / prev.length) * 100);
+      const dir: Trend["dir"] = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+      const word = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+      trends.push({
+        dir,
+        text: `Milestone volume ${word} ${delta === 0 ? "" : `${Math.abs(pct)}% `}vs ${prevLabel} (${prev.length} → ${total}).`,
+      });
+    }
+
+    // Category momentum: which domain gained the most events vs the prior quarter.
+    const prevByCat = new Map(countByCategory(prev).map((s) => [s.category, s.count]));
+    let mover: { category: string; gain: number } | null = null;
+    for (const s of cats) {
+      const gain = s.count - (prevByCat.get(s.category) ?? 0);
+      if (mover == null || gain > mover.gain) mover = { category: s.category, gain };
+    }
+    if (mover && mover.gain > 0) {
+      trends.push({
+        dir: "up",
+        text: `${categoryLabel(mover.category)} is the fastest-growing domain (+${mover.gain} vs ${prevLabel}).`,
+      });
+    }
+
+    // Concentration: flag when one domain dominates the quarter.
+    if (top && top.count / total >= 0.4) {
+      trends.push({
+        dir: "flat",
+        text: `Activity is concentrated — ${categoryLabel(top.category)} alone is ${Math.round((top.count / total) * 100)}% of the quarter.`,
+      });
+    }
+
+    return { takeaways, trends, total };
+  }, [milestones]);
 
   return (
     <div className="rounded-lg border border-edge bg-panel p-5">
       <div className="mb-1 flex items-baseline justify-between">
-        <span className="font-mono text-xs uppercase tracking-[0.1em] text-signal">Q2 2026 Breakdown</span>
+        <span className="font-mono text-xs uppercase tracking-[0.1em] text-signal">Q2 2026 Summary</span>
         <span className="font-mono text-[0.65rem] text-gray-500">Apr–Jun 2026</span>
       </div>
       <p className="mb-4 text-sm text-gray-600">
-        Milestones dated in the second quarter of 2026, by mission domain.
+        The quarter in brief — the big takeaways and how the numbers are moving.
       </p>
 
       {total === 0 ? (
         <p className="py-4 text-sm text-gray-500">No milestones dated in Q2 2026 yet.</p>
       ) : (
-        <div className="flex items-center gap-4">
-          <svg viewBox="0 0 100 100" className="h-28 w-28 shrink-0" role="img" aria-label="Category breakdown for Q2 2026">
-            <circle cx="50" cy="50" r={R} fill="none" stroke="#E3E6E9" strokeWidth="14" />
-            <g transform="rotate(-90 50 50)">
-              {slices.map((s) => {
-                const frac = total ? s.count / total : 0;
-                const dash = Math.max(0, frac * C - GAP);
-                const seg = (
-                  <circle
-                    key={s.category}
-                    cx="50"
-                    cy="50"
-                    r={R}
-                    fill="none"
-                    stroke={categoryColor(s.category)}
-                    strokeWidth="14"
-                    strokeDasharray={`${dash} ${C - dash}`}
-                    strokeDashoffset={-offset}
-                  >
-                    <title>{`${categoryLabel(s.category)}: ${s.count} (${Math.round(frac * 100)}%)`}</title>
-                  </circle>
-                );
-                offset += frac * C;
-                return seg;
-              })}
-            </g>
-            <text x="50" y="47" textAnchor="middle" className="fill-ink font-mono" style={{ fontSize: "16px", fontWeight: 700 }}>
-              {total}
-            </text>
-            <text x="50" y="60" textAnchor="middle" className="fill-gray-500 font-mono" style={{ fontSize: "7px" }}>
-              {total === 1 ? "EVENT" : "EVENTS"}
-            </text>
-          </svg>
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div>
+            <h4 className="mb-2 font-mono text-[0.7rem] uppercase tracking-[0.1em] text-ink">Big Takeaways</h4>
+            <ul className="space-y-2">
+              {takeaways.map((t, i) => (
+                <li key={i} className="flex gap-2.5 text-sm leading-snug text-gray-700">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-signal" aria-hidden />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-          <ul className="min-w-0 flex-1 space-y-1">
-            {slices.map((s) => (
-              <li key={s.category} className="flex items-center gap-2 text-[0.72rem] text-gray-700">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: categoryColor(s.category) }} />
-                <span className="min-w-0 flex-1 truncate leading-tight">{categoryLabel(s.category)}</span>
-                <span className="shrink-0 whitespace-nowrap font-mono font-semibold tabular-nums text-ink">
-                  {s.count} · {total ? Math.round((s.count / total) * 100) : 0}%
-                </span>
-              </li>
-            ))}
-          </ul>
+          {trends.length > 0 && (
+            <div>
+              <h4 className="mb-2 font-mono text-[0.7rem] uppercase tracking-[0.1em] text-ink">Notable Trends</h4>
+              <ul className="space-y-2">
+                {trends.map((t, i) => (
+                  <li key={i} className="flex gap-2.5 text-sm leading-snug text-gray-700">
+                    <span
+                      className={`mt-0.5 shrink-0 font-mono text-xs font-bold ${
+                        t.dir === "up" ? "text-signal" : t.dir === "down" ? "text-brand" : "text-gray-400"
+                      }`}
+                      aria-hidden
+                    >
+                      {t.dir === "up" ? "▲" : t.dir === "down" ? "▼" : "—"}
+                    </span>
+                    <span>{t.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>
