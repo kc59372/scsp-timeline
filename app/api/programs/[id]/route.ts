@@ -8,8 +8,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import { canReadApi } from "@/lib/apiGuard";
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  if (!(await canReadApi(req))) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
   const session = await requireAdmin();
 
   const program = await prisma.program.findUnique({

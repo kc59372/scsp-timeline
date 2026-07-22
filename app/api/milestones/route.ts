@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Category, EntryStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import { canReadApi } from "@/lib/apiGuard";
 import { normalizeMilestone } from "@/lib/ingest";
 
 const CATEGORY_VALUES = new Set(Object.values(Category));
@@ -24,6 +25,12 @@ const STATUS_VALUES = new Set(Object.values(EntryStatus));
 const DEFAULT_PAGE_SIZE = 500;
 
 export async function GET(req: NextRequest) {
+  // Data-API lock: only the internal server render (token) or an admin may read
+  // the JSON API. Blocks direct browser/script bulk export (e.g. ?pageSize=all).
+  if (!(await canReadApi(req))) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = req.nextUrl;
 
   // Resolve requested status. Anything other than APPROVED is admin-gated.

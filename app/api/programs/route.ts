@@ -10,12 +10,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { Category, Country } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import { canReadApi } from "@/lib/apiGuard";
 import { programSlug } from "@/lib/ingest";
 
 const CATEGORY_VALUES = new Set(Object.values(Category));
 const COUNTRY_VALUES = new Set(Object.values(Country));
 
 export async function GET(req: NextRequest) {
+  if (!(await canReadApi(req))) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
   const q = req.nextUrl.searchParams.get("q")?.trim();
   const programs = await prisma.program.findMany({
     where: q ? { name: { contains: q, mode: "insensitive" } } : undefined,

@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma, Category, SystemStatus, EntryStatus, EventType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import { canReadApi } from "@/lib/apiGuard";
 
 const CATEGORY_VALUES = new Set(Object.values(Category));
 const SYSTEM_STATUS_VALUES = new Set(Object.values(SystemStatus));
@@ -25,7 +26,10 @@ const NULLABLE_STRING_FIELDS = [
   "contractNumber", "issuingAgency", "awardedTo", "reviewNote",
 ] as const;
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  if (!(await canReadApi(req))) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
   const session = await requireAdmin();
   const where: Prisma.MilestoneWhereInput = session
     ? { id: params.id }

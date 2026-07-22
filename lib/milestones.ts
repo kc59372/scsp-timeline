@@ -84,6 +84,17 @@ function baseUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 }
 
+/**
+ * Header the app's own server components attach so the (locked) data API accepts
+ * the internal render call — see lib/apiGuard.ts. No-op if INTERNAL_API_TOKEN is
+ * unset. These helpers run server-side; in a client bundle the non-public env
+ * var resolves to undefined (never inlined), so the token can't leak.
+ */
+function internalHeaders(base: Record<string, string> = {}): Record<string, string> {
+  const token = process.env.INTERNAL_API_TOKEN;
+  return token ? { ...base, "x-internal-token": token } : base;
+}
+
 export async function fetchMilestones(
   params: { category?: string; page?: number; pageSize?: number | "all" } = {},
 ): Promise<MilestonesResponse> {
@@ -93,13 +104,16 @@ export async function fetchMilestones(
   if (params.pageSize) qs.set("pageSize", String(params.pageSize));
 
   const url = `${baseUrl()}/api/milestones${qs.toString() ? `?${qs}` : ""}`;
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url, { cache: "no-store", headers: internalHeaders() });
   if (!res.ok) throw new Error(`fetchMilestones failed: ${res.status}`);
   return res.json();
 }
 
 export async function fetchMilestone(id: string): Promise<Milestone | null> {
-  const res = await fetch(`${baseUrl()}/api/milestones/${id}`, { cache: "no-store" });
+  const res = await fetch(`${baseUrl()}/api/milestones/${id}`, {
+    cache: "no-store",
+    headers: internalHeaders(),
+  });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`fetchMilestone failed: ${res.status}`);
   return res.json();
@@ -119,7 +133,7 @@ export async function fetchMilestonesAdmin(
   if (params.category) qs.set("category", params.category);
   const res = await fetch(`${baseUrl()}/api/milestones?${qs}`, {
     cache: "no-store",
-    headers: { cookie },
+    headers: internalHeaders({ cookie }),
   });
   if (!res.ok) throw new Error(`fetchMilestonesAdmin failed: ${res.status}`);
   return res.json();
@@ -134,7 +148,7 @@ export interface ProgramWithEvents extends Program {
 export async function fetchProgram(id: string, cookie?: string): Promise<ProgramWithEvents | null> {
   const res = await fetch(`${baseUrl()}/api/programs/${id}`, {
     cache: "no-store",
-    headers: cookie ? { cookie } : undefined,
+    headers: internalHeaders(cookie ? { cookie } : {}),
   });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`fetchProgram failed: ${res.status}`);
@@ -149,7 +163,7 @@ export async function fetchPrograms(
   const qs = q ? `?q=${encodeURIComponent(q)}` : "";
   const res = await fetch(`${baseUrl()}/api/programs${qs}`, {
     cache: "no-store",
-    headers: cookie ? { cookie } : undefined,
+    headers: internalHeaders(cookie ? { cookie } : {}),
   });
   if (!res.ok) throw new Error(`fetchPrograms failed: ${res.status}`);
   const data = await res.json();
@@ -159,7 +173,7 @@ export async function fetchPrograms(
 export async function fetchMilestoneAdmin(id: string, cookie: string): Promise<Milestone | null> {
   const res = await fetch(`${baseUrl()}/api/milestones/${id}`, {
     cache: "no-store",
-    headers: { cookie },
+    headers: internalHeaders({ cookie }),
   });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`fetchMilestoneAdmin failed: ${res.status}`);

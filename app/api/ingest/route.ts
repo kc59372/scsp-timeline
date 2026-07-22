@@ -19,6 +19,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { normalizeMilestone, eventStatus, statusRank, type RawMilestone } from "@/lib/ingest";
 import { verifyEntry, type VerifyStatus } from "@/lib/verify";
+import { postToAirtable } from "@/lib/airtable";
 
 /** Constant-time compare of the Bearer token against INGEST_TOKEN. */
 function tokenOk(req: NextRequest): boolean {
@@ -135,6 +136,31 @@ export async function POST(req: NextRequest) {
           },
         });
         inserted++;
+
+        // Push review-needed entries (PENDING) to Airtable as an extra review
+        // surface. Best-effort: a failure/no-op never blocks or fails ingest —
+        // the entry is already persisted in the DB with its verdict. No-ops
+        // silently until the hardcoded Airtable config (lib/airtable.ts) is
+        // filled in.
+        if (verdict.status === "PENDING") {
+          const sent = await postToAirtable({
+            name: data.name,
+            description: data.description ?? "",
+            actor: data.actor ?? "Unknown",
+            category: data.category as string,
+            eventType: eventType ?? null,
+            eventDate: data.eventDate ?? null,
+            sourceName: data.sourceName ?? "",
+            sourceUrl: data.sourceUrl ?? "",
+            contractValue: data.contractValue ?? null,
+            significance: data.significance ?? 1,
+            entryStatus: verdict.status,
+            verifyReason: `${verdict.method}: ${verdict.reason}`,
+          });
+          if (!sent.ok) {
+            console.log(`[ingest] airtable post skipped/failed: ${sent.reason}`);
+          }
+        }
       }
     } catch (e) {
       errors.push({
