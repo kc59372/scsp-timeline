@@ -2,12 +2,16 @@
 
 import { useMemo, useState } from "react";
 import type { Milestone } from "@/lib/milestones";
-import { primaryYear } from "@/lib/format";
+import { primaryDateIso, primaryYear } from "@/lib/format";
 import { categoryColor, categoryLabel, compareCategories } from "@/lib/categories";
 import { AdoptionVelocityChart } from "./AdoptionVelocityChart";
 
 const START_YEAR = 2016;
 const END_YEAR = 2026;
+
+// The single quarter this breakdown card spotlights: 2026 Q2 (Apr–Jun).
+const QUARTER_YEAR = 2026;
+const QUARTER_INDEX = 1; // 0=Q1, 1=Q2, 2=Q3, 3=Q4
 
 /**
  * Homepage graphics: the adoption-velocity bar chart on top (full width), with
@@ -22,6 +26,99 @@ export function HomeGraphics({ milestones }: { milestones: Milestone[] }) {
         <VelocityLineChart milestones={milestones} />
         <CategoryShareDonut milestones={milestones} />
       </div>
+      <QuarterlyBreakdown milestones={milestones} />
+    </div>
+  );
+}
+
+/**
+ * Spotlight card: category breakdown of milestones dated in 2026 Q2 (Apr–Jun) —
+ * the current reporting quarter. Mirrors CategoryShareDonut but filters the set
+ * to the single quarter first.
+ */
+function QuarterlyBreakdown({ milestones }: { milestones: Milestone[] }) {
+  const { slices, total } = useMemo(() => {
+    const byCat = new Map<string, number>();
+    for (const m of milestones) {
+      const iso = primaryDateIso(m);
+      if (!iso) continue;
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) continue;
+      if (d.getUTCFullYear() !== QUARTER_YEAR) continue;
+      if (Math.floor(d.getUTCMonth() / 3) !== QUARTER_INDEX) continue;
+      byCat.set(m.category, (byCat.get(m.category) ?? 0) + 1);
+    }
+    const slices: Slice[] = Array.from(byCat.entries())
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count || compareCategories(a.category, b.category));
+    return { slices, total: slices.reduce((sum, s) => sum + s.count, 0) };
+  }, [milestones]);
+
+  const R = 42;
+  const C = 2 * Math.PI * R;
+  const GAP = slices.length > 1 ? 3 : 0;
+  let offset = 0;
+
+  return (
+    <div className="rounded-lg border border-edge bg-panel p-5">
+      <div className="mb-1 flex items-baseline justify-between">
+        <span className="font-mono text-xs uppercase tracking-[0.1em] text-signal">Q2 2026 Breakdown</span>
+        <span className="font-mono text-[0.65rem] text-gray-500">Apr–Jun 2026</span>
+      </div>
+      <p className="mb-4 text-sm text-gray-600">
+        Milestones dated in the second quarter of 2026, by mission domain.
+      </p>
+
+      {total === 0 ? (
+        <p className="py-4 text-sm text-gray-500">No milestones dated in Q2 2026 yet.</p>
+      ) : (
+        <div className="flex items-center gap-4">
+          <svg viewBox="0 0 100 100" className="h-28 w-28 shrink-0" role="img" aria-label="Category breakdown for Q2 2026">
+            <circle cx="50" cy="50" r={R} fill="none" stroke="#E3E6E9" strokeWidth="14" />
+            <g transform="rotate(-90 50 50)">
+              {slices.map((s) => {
+                const frac = total ? s.count / total : 0;
+                const dash = Math.max(0, frac * C - GAP);
+                const seg = (
+                  <circle
+                    key={s.category}
+                    cx="50"
+                    cy="50"
+                    r={R}
+                    fill="none"
+                    stroke={categoryColor(s.category)}
+                    strokeWidth="14"
+                    strokeDasharray={`${dash} ${C - dash}`}
+                    strokeDashoffset={-offset}
+                  >
+                    <title>{`${categoryLabel(s.category)}: ${s.count} (${Math.round(frac * 100)}%)`}</title>
+                  </circle>
+                );
+                offset += frac * C;
+                return seg;
+              })}
+            </g>
+            <text x="50" y="47" textAnchor="middle" className="fill-ink font-mono" style={{ fontSize: "16px", fontWeight: 700 }}>
+              {total}
+            </text>
+            <text x="50" y="60" textAnchor="middle" className="fill-gray-500 font-mono" style={{ fontSize: "7px" }}>
+              {total === 1 ? "EVENT" : "EVENTS"}
+            </text>
+          </svg>
+
+          <ul className="min-w-0 flex-1 space-y-1">
+            {slices.map((s) => (
+              <li key={s.category} className="flex items-center gap-2 text-[0.72rem] text-gray-700">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: categoryColor(s.category) }} />
+                <span className="min-w-0 flex-1 truncate leading-tight">{categoryLabel(s.category)}</span>
+                <span className="shrink-0 whitespace-nowrap font-mono font-semibold tabular-nums text-ink">
+                  {s.count} · {total ? Math.round((s.count / total) * 100) : 0}%
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
