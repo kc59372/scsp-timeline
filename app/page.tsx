@@ -44,7 +44,7 @@ export default async function Home() {
       {/* ── Main column: graphics, recent events, main projects ── */}
       <div className="min-w-0 flex-1 space-y-14">
         <section>
-          <h2 className="mb-5 text-xl font-bold tracking-tight text-ink">Graphics</h2>
+          <h2 className="mb-5 text-xl font-bold tracking-tight text-ink">Overview</h2>
           <HomeGraphics milestones={items} />
         </section>
 
